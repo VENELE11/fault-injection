@@ -1,0 +1,15 @@
+qemu-system-aarch64 \
+  -name install_victim \
+  -M virt,accel=kvm \
+  -cpu host \
+  -m 1024 \
+  -bios ./uefi.fd \
+  -drive file=images/victim.qcow2,format=qcow2,if=virtio \
+  -drive file=images/alpine-standard-3.19.1-aarch64.iso,media=cdrom,if=none,id=cd0 \
+  -device virtio-scsi-pci -device scsi-cd,drive=cd0 \
+  -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
+  -device virtio-gpu-pci \
+  -device qemu-xhci \
+  -device usb-kbd \
+  -device usb-tablet \
+  -boot menu=on
