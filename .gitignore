@@ -41,3 +41,6 @@ tmp/
 # Disk fill simulation files
 **/hdfs_disk_fill
 **/cs_storage_fill
+
+# CodeQL artifacts
+_codeql_detected_source_root
