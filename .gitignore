@@ -14,6 +14,11 @@
 虚拟机注入/target_cpu
 虚拟机注入/target_mem
 
+# KVM folder compiled binaries
+kvm注入/hadoop-fi/hadoop_injector
+kvm注入/cloudstack-fi/cloudstack_injector
+kvm注入/cluster_controller
+
 # KVM kernel modules
 kvm注入/**/*.ko
 kvm注入/**/*.o

@@ -6,10 +6,8 @@
 项目旨在通过模拟真实的硬件故障（如位翻转）、软件逻辑错误（如死锁、资源耗尽）以及网络异常，来验证云计算平台、操作系统内核以及上层业务的高可用性 (High Availability) 和容错能力。
 
 主要包含以下核心组件：
-1.  **kvm注入 (KVM-Side)**: 运行在宿主机 (Host)，基于 Linux 内核模块，针对 KVM Hypervisor 和宿主机内核进行注入。
+1.  **kvm注入 (KVM-Side)**: 运行在宿主机 (Host)，基于 Linux 内核模块，针对 KVM Hypervisor 和宿主机内核进行注入。**同时包含 Hadoop 和 CloudStack 故障注入工具。**
 2.  **虚拟机注入 (VM-Side)**: 运行在虚拟机内部 (Guest) 或针对 QEMU 进程，模拟应用层、OS 层及资源层的故障。
-3.  **Hadoop 注入 (新增)**: 针对 Hadoop 分布式集群 (HDFS/YARN) 的专用故障注入工具。
-4.  **CloudStack 注入 (新增)**: 针对 CloudStack 云计算平台的故障注入工具。
 
 ### 1.1 适用环境
 - **宿主机**: Mac ARM (M1/M2/M3) + UTM 虚拟化 或 Linux x86_64 + KVM
@@ -21,32 +19,39 @@
 
 ```
 .
-├── kvm注入/                    # [核心] 面向 KVM 层的内核级注入工具 (ARM64适配 2.0版)
-│   ├── cpu-fi/                 # CPU 寄存器与执行流注入
-│   ├── memory-manage-fi/       # 内存管理与回收(kswapd)注入
-│   ├── access-control-fi/      # 权限控制与资源访问注入
-│   ├── file-fi/                # 文件系统 I/O 注入
-│   ├── vm-migration-fi/        # 虚拟机热迁移故障注入
-│   └── ... (详见子目录 README)
+├── kvm注入/                        # [核心] 面向 KVM 层的故障注入工具
+│   ├── cpu-fi/                     # CPU 寄存器与执行流注入 (内核模块)
+│   ├── memory-fi/                  # 内存故障注入 (内核模块)
+│   ├── memory-manage-fi/           # 内存管理注入 (内核模块)
+│   ├── access-control-fi/          # 权限控制注入 (内核模块)
+│   ├── file-fi/                    # 文件系统 I/O 注入 (内核模块)
+│   ├── state-query-fi/             # 状态查询注入 (内核模块)
+│   ├── vm-migration-fi/            # 虚拟机热迁移故障注入 (内核模块)
+│   ├── hadoop-fi/                  # [新增] Hadoop 集群故障注入
+│   │   ├── hadoop_injector.c       # Hadoop 故障注入工具
+│   │   └── Makefile
+│   ├── cloudstack-fi/              # [新增] CloudStack 云平台故障注入
+│   │   ├── cloudstack_injector.c   # CloudStack 故障注入工具
+│   │   └── Makefile
+│   ├── cluster_controller.c        # [新增] 集群统一控制器
+│   ├── cluster_manage.sh           # [新增] 集群管理脚本
+│   ├── cluster.conf                # [新增] 集群配置文件
+│   ├── Makefile                    # 编译配置
+│   └── README.md                   # 详细使用说明
 │
-├── 虚拟机注入/                  # [核心] 面向 Guest OS 的应用级注入工具
-│   ├── cpu_injector.c          # CPU 争抢与高负载
-│   ├── mem_injector.c          # 内存数据篡改 (ptrace)
-│   ├── network_injector.c      # 网络故障 (延迟/丢包/断网)
-│   ├── process_injector.c      # 进程状态注入 (崩溃/挂起)
-│   ├── fault_controller.c      # 综合故障控制器
-│   ├── hadoop_injector.c       # [新增] Hadoop 集群故障注入
-│   ├── cloudstack_injector.c   # [新增] CloudStack 云平台故障注入
-│   ├── cluster_controller.c    # [新增] 集群统一控制器
-│   ├── cluster_manage.sh       # [新增] 集群管理脚本
-│   ├── cluster.conf            # [新增] 集群配置文件
-│   ├── run_cluster.sh          # QEMU 虚拟机启动脚本
-│   ├── Makefile                # 编译配置
-│   └── ... (详见子目录 README)
+├── 虚拟机注入/                      # 面向 Guest OS 的应用级注入工具
+│   ├── cpu_injector.c              # CPU 争抢与高负载
+│   ├── mem_injector.c              # 内存数据篡改 (ptrace)
+│   ├── network_injector.c          # 网络故障 (延迟/丢包/断网)
+│   ├── process_injector.c          # 进程状态注入 (崩溃/挂起)
+│   ├── fault_controller.c          # 综合故障控制器
+│   ├── run_cluster.sh              # QEMU 虚拟机启动脚本
+│   ├── Makefile                    # 编译配置
+│   └── README.md                   # 详细使用说明
 │
-├── 故障现象.txt                 # 历史测试中观测到的故障现象记录
-├── 环境搭建文档.txt              # 基础环境搭建参考手册
-└── README.md                   # 本文件
+├── 故障现象.txt                     # 历史测试中观测到的故障现象记录
+├── 环境搭建文档.txt                  # 基础环境搭建参考手册
+└── README.md                       # 本文件
 ```
 
 ## 3. 快速上手指南
@@ -62,17 +67,29 @@
     *   在虚拟机内部安装 Hadoop 集群
 
 ### 阶段二：编译工具
+
+#### 编译 KVM 注入工具（包含 Hadoop/CloudStack）
 ```bash
-# 进入虚拟机注入目录
-cd 虚拟机注入/
+# 进入 kvm注入 目录
+cd kvm注入/
 
 # 使用 Makefile 一键编译所有工具
 make all
 
-# 或者只编译特定模块
-make basic      # 基础注入器
-make cluster    # Hadoop/CloudStack 注入器
-make test       # 测试靶子 (用于验证注入效果的测试程序)
+# 这将编译:
+# - 所有内核模块 (cpu-fi, memory-fi, file-fi 等)
+# - hadoop-fi/hadoop_injector
+# - cloudstack-fi/cloudstack_injector
+# - cluster_controller
+```
+
+#### 编译虚拟机注入工具
+```bash
+# 进入虚拟机注入目录
+cd 虚拟机注入/
+
+# 编译基础注入器
+make all
 ```
 
 ### 阶段三：Guest 侧故障模拟 (虚拟机内部)
@@ -82,47 +99,48 @@ make test       # 测试靶子 (用于验证注入效果的测试程序)
 3.  运行注入:
     *   **内存泄漏**: `./mem_leak 0 1024` (吞噬 1GB 内存)
     *   **网络延迟**: `sudo ./network_injector 1 200ms` (增加 200ms 延迟)
-    *   **进程崩溃**: `sudo ./process_injector nginx 1` (杀掉 nginx 进程)
+    *   **进程崩溃**: `sudo ./process_injector nginx 1`
 
-### 阶段四：Hadoop 集群故障注入 (新增)
-如果您希望测试 Hadoop 集群的容错能力（需要在 `虚拟机注入/` 目录下执行）：
+### 阶段四：Hadoop 集群故障注入
+Hadoop 故障注入工具位于 `kvm注入/hadoop-fi/` 目录：
 ```bash
+cd kvm注入/hadoop-fi/
+
 # 查看 Hadoop 进程状态
 ./hadoop_injector list
 
 # 终止 NameNode (测试 HDFS 可用性)
 sudo ./hadoop_injector crash nn
 
-# 隔离 DataNode 节点 (测试网络分区) - 请将IP替换为实际节点IP
+# 隔离 DataNode 节点 (测试网络分区)
 sudo ./hadoop_injector network 192.168.64.11
 
 # 进入 HDFS 安全模式
 ./hadoop_injector hdfs-safe enter
-
-# 使用集群管理脚本
-./cluster_manage.sh status           # 查看状态 (部分功能需要sudo)
-sudo ./cluster_manage.sh inject-delay 100ms  # 注入网络延迟
 ```
 
-### 阶段五：CloudStack 故障注入 (新增)
-如果您希望测试 CloudStack 云平台的高可用性：
+### 阶段五：CloudStack 故障注入
+CloudStack 故障注入工具位于 `kvm注入/cloudstack-fi/` 目录：
 ```bash
+cd kvm注入/cloudstack-fi/
+
 # 查看 CloudStack 服务状态
 ./cloudstack_injector list
 
-# 注入 API 延迟
+# 注入 API 延迟 (500ms)
 sudo ./cloudstack_injector api-delay 500
 
 # 终止 Management Server
 sudo ./cloudstack_injector crash ms
 
 # 断开 Agent 连接
-sudo ./cloudstack_injector agent-disconnect 192.168.1.20
+sudo ./cloudstack_injector agent-disconnect
 ```
 
 ### 阶段六：使用统一控制器
-如果您希望使用交互式界面：
+集群控制器位于 `kvm注入/` 目录：
 ```bash
+cd kvm注入/
 # 启动统一控制器
 sudo ./cluster_controller
 
