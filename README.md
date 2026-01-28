@@ -72,7 +72,7 @@ make all
 # 或者只编译特定模块
 make basic      # 基础注入器
 make cluster    # Hadoop/CloudStack 注入器
-make test       # 测试靶子
+make test       # 测试靶子 (用于验证注入效果的测试程序)
 ```
 
 ### 阶段三：Guest 侧故障模拟 (虚拟机内部)
@@ -85,7 +85,7 @@ make test       # 测试靶子
     *   **进程崩溃**: `sudo ./process_injector nginx 1` (杀掉 nginx 进程)
 
 ### 阶段四：Hadoop 集群故障注入 (新增)
-如果您希望测试 Hadoop 集群的容错能力：
+如果您希望测试 Hadoop 集群的容错能力（需要在 `虚拟机注入/` 目录下执行）：
 ```bash
 # 查看 Hadoop 进程状态
 ./hadoop_injector list
@@ -93,15 +93,15 @@ make test       # 测试靶子
 # 终止 NameNode (测试 HDFS 可用性)
 sudo ./hadoop_injector crash nn
 
-# 隔离 DataNode 节点 (测试网络分区)
+# 隔离 DataNode 节点 (测试网络分区) - 请将IP替换为实际节点IP
 sudo ./hadoop_injector network 192.168.64.11
 
 # 进入 HDFS 安全模式
 ./hadoop_injector hdfs-safe enter
 
 # 使用集群管理脚本
-./cluster_manage.sh status
-./cluster_manage.sh inject-delay 100ms
+./cluster_manage.sh status           # 查看状态 (部分功能需要sudo)
+sudo ./cluster_manage.sh inject-delay 100ms  # 注入网络延迟
 ```
 
 ### 阶段五：CloudStack 故障注入 (新增)
@@ -155,12 +155,15 @@ sudo ./cluster_controller
 *   ⚠️ **高风险**: `kvm注入` 修改内核行为，极易导致宿主机 Kernel Panic (死机)。请务必在测试环境中运行，严禁用于生产环境。
 *   **版本兼容**: 部分 KVM 注入模块依赖特定内核符号 (如 `kernel_clone` vs `_do_fork`)，如果加载失败，请根据 `kvm注入/README.md` 中的指南适配当前内核版本。
 *   **快照建议**: 在进行任何故障注入前，建议对虚拟机创建快照，以便快速恢复。
+    *   UTM: 在 UTM 界面右键点击虚拟机 -> "Snapshots" -> "Take Snapshot"
+    *   KVM/virsh: `virsh snapshot-create-as <vm-name> snapshot1`
 *   **网络隔离**: 使用网络故障注入后，请及时清理 iptables 规则，避免影响正常通信。
+*   **权限说明**: 大部分注入工具需要 `sudo` 权限运行。
 
 ## 6. 集群配置指南
 
 ### 6.1 3节点 Hadoop 集群配置
-推荐的节点配置：
+推荐的节点配置（**请根据实际环境修改IP地址**）：
 
 | 节点 | IP地址 | 角色 |
 |------|--------|------|
@@ -168,16 +171,19 @@ sudo ./cluster_controller
 | slave1 | 192.168.64.11 | DataNode, NodeManager |
 | slave2 | 192.168.64.12 | DataNode, NodeManager |
 
-### 6.2 配置文件
-修改 `虚拟机注入/cluster.conf` 以匹配您的实际环境：
+> **注意**: 上述 IP 地址 (192.168.64.x) 是 UTM/QEMU 的默认 NAT 网段。如果使用其他虚拟化方案（VirtualBox、VMware、原生KVM等），请修改为实际分配的 IP 地址。
+
+### 6.2 配置文件格式
+修改 `虚拟机注入/cluster.conf` 以匹配您的实际环境。格式：`节点名,IP地址,SSH端口,角色列表`
 ```
+# 节点名,IP地址,SSH端口,角色（多个角色用逗号分隔）
 master,192.168.64.10,22,NameNode,ResourceManager
 slave1,192.168.64.11,22,DataNode,NodeManager
 slave2,192.168.64.12,22,DataNode,NodeManager
 ```
 
 ### 6.3 UTM (Mac ARM) 网络配置
-如果使用 UTM 端口转发模式：
+如果使用 UTM 端口转发模式（通过 localhost 访问虚拟机）：
 ```
 master,localhost,2220,NameNode,ResourceManager
 slave1,localhost,2221,DataNode,NodeManager

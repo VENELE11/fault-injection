@@ -35,7 +35,8 @@ kvm注入/**/modules.order
 # Temporary files
 *.tmp
 *.log
-/tmp/
+tmp/
+**/tmp/
 
 # Disk fill simulation files
 **/hdfs_disk_fill
