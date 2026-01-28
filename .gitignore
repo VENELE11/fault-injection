@@ -1,0 +1,51 @@
+# Compiled binaries
+虚拟机注入/cpu_injector
+虚拟机注入/mem_injector
+虚拟机注入/mem_leak
+虚拟机注入/network_injector
+虚拟机注入/process_injector
+虚拟机注入/reg_injector
+虚拟机注入/fault_controller
+虚拟机注入/hadoop_injector
+虚拟机注入/cloudstack_injector
+虚拟机注入/cluster_controller
+虚拟机注入/target
+虚拟机注入/target_v2
+虚拟机注入/target_cpu
+虚拟机注入/target_mem
+
+# KVM folder compiled binaries
+kvm注入/hadoop-fi/hadoop_injector
+kvm注入/cloudstack-fi/cloudstack_injector
+kvm注入/cluster_controller
+
+# KVM kernel modules
+kvm注入/**/*.ko
+kvm注入/**/*.o
+kvm注入/**/*.mod
+kvm注入/**/*.mod.c
+kvm注入/**/*.order
+kvm注入/**/*.symvers
+kvm注入/**/Module.symvers
+kvm注入/**/modules.order
+
+# Editor and OS files
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
+tmp/
+**/tmp/
+
+# Disk fill simulation files
+**/hdfs_disk_fill
+**/cs_storage_fill
+
+# CodeQL artifacts
+_codeql_detected_source_root
