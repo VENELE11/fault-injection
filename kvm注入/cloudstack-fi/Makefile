@@ -1,5 +1,5 @@
 # Makefile for CloudStack Fault Injection (增强版)
-# 基于论文《云计算系统故障注入平台的研究与设计》
+# 
 # CloudStack 云平台故障注入工具编译配置
 
 CC = gcc

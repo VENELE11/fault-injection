@@ -38,35 +38,35 @@ void inject_network(int type, const char *param)
 
     if (type == 0)
     {
-        printf("✅ 网络故障已清理，网卡 %s 恢复正常\n", nic);
+        printf(" 网络故障已清理，网卡 %s 恢复正常\n", nic);
         return;
     }
     // 注入新故障
     if (type == 1)
     { // Delay
         sprintf(cmd, "tc qdisc add dev %s root netem delay %s", nic, param);
-        printf("🐢 [Delay] 已注入延迟: %s (设备: %s)\n", param, nic);
+        printf(" [Delay] 已注入延迟: %s (设备: %s)\n", param, nic);
     }
     else if (type == 2)
     { // Loss
         sprintf(cmd, "tc qdisc add dev %s root netem loss %s", nic, param);
-        printf("📉 [Loss] 已注入丢包率: %s (设备: %s)\n", param, nic);
+        printf(" [Loss] 已注入丢包率: %s (设备: %s)\n", param, nic);
     }
     else if (type == 3)
     { // Partition
         sprintf(cmd, "iptables -A OUTPUT -p tcp --dport %s -j DROP", param);
-        printf("🚧 [Partition] 已封锁端口: %s (模拟断网)\n", param);
+        printf(" [Partition] 已封锁端口: %s (模拟断网)\n", param);
     }
     else if (type == 4)
     { // Corrupt
         sprintf(cmd, "tc qdisc add dev %s root netem corrupt %s", nic, param);
-        printf("🧪 [Corrupt] 已注入报文损坏率: %s (设备: %s)\n", param, nic);
+        printf(" [Corrupt] 已注入报文损坏率: %s (设备: %s)\n", param, nic);
     }
 
     // 执行命令
     int ret = system(cmd);
     if (ret != 0)
-        printf("⚠️  警告: 网络命令执行返回异常 (Code: %d)\n", ret);
+        printf("  警告: 网络命令执行返回异常 (Code: %d)\n", ret);
 }
 
 int main(int argc, char *argv[])

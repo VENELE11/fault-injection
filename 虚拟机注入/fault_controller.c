@@ -57,14 +57,14 @@ void inject_memory_wrapper(const char *target)
     int pid = get_vm_pid(target);
     if (pid == -1)
     {
-        printf("❌ [错误] 未找到进程: %s (需先启动目标程序)\n", target);
+        printf(" [错误] 未找到进程: %s (需先启动目标程序)\n", target);
         return;
     }
 
     printf("\n--- 内存故障配置 (PID: %d) ---\n", pid);
     printf("1. 盲注 (Blind Injection - Heap/Stack)\n");
     printf("2. 扫描特征值注入 (Scan & Inject)\n");
-    printf("👉 选择模式: ");
+    printf(" 选择模式: ");
 
     char input[10];
     if (!fgets(input, sizeof(input), stdin))
@@ -131,7 +131,7 @@ void inject_register_wrapper(const char *target)
     int pid = get_vm_pid(target);
     if (pid == -1)
     {
-        printf("❌ [错误] 未找到进程: %s\n", target);
+        printf(" [错误] 未找到进程: %s\n", target);
         return;
     }
 
@@ -181,7 +181,7 @@ void inject_cpu_wrapper(const char *target)
     int pid = get_vm_pid(target);
     if (pid == -1)
     {
-        printf("❌ 未找到进程: %s\n", target);
+        printf(" 未找到进程: %s\n", target);
         return;
     }
 
@@ -254,7 +254,7 @@ void show_menu()
     printf(" c. 一键复原 (Clear All)\n");
     printf(" q. 退出 (Quit)\n");
     printf("========================================\n");
-    printf("👉 请输入选项: ");
+    printf(" 请输入选项: ");
 }
 
 int main()
@@ -265,7 +265,7 @@ int main()
 
     if (geteuid() != 0)
     {
-        printf("🔴 严重错误: 请使用 sudo 运行此程序！\n");
+        printf(" 严重错误: 请使用 sudo 运行此程序！\n");
         return 1;
     }
 
@@ -275,7 +275,7 @@ int main()
         access("./mem_injector", F_OK) != 0 ||
         access("./reg_injector", F_OK) != 0)
     {
-        printf("⚠️  警告: 未找到部分子模块 (process/network/mem/reg_injector)\n");
+        printf("  警告: 未找到部分子模块 (process/network/mem/reg_injector)\n");
         printf("   请确保所有模块均已编译: gcc xxx.c -o xxx\n");
     }
 
@@ -348,7 +348,7 @@ int main()
             inject_mem_leak_wrapper(target);
         }
         else
-            printf("❌ 无效输入\n");
+            printf(" 无效输入\n");
     }
     return 0;
 }

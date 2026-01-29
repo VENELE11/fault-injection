@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
     // 2. 处理延时逻辑 (如果有 -w 参数)
     if (wait_usec > 0)
     {
-        printf("⏳ 延时模式: 目标将继续运行 %.2f 秒...\n", wait_usec / 1000000.0);
+        printf(" 延时模式: 目标将继续运行 %.2f 秒...\n", wait_usec / 1000000.0);
 
         signal(SIGALRM, alarm_handler);
         ualarm(wait_usec, 0); // 设置微秒定时器
@@ -228,17 +228,17 @@ int main(int argc, char *argv[])
 
         if (WIFSTOPPED(status))
         {
-            printf("⏰ 时间触发: 捕获目标，准备注入...\n");
+            printf(" 时间触发: 捕获目标，准备注入...\n");
         }
         else
         {
-            printf("⚠️ 警告: 目标在等待期间异常退出。\n");
+            printf(" 警告: 目标在等待期间异常退出。\n");
             return 1;
         }
     }
     else
     {
-        printf("⚡ 立即模式: 直接注入...\n");
+        printf(" 立即模式: 直接注入...\n");
     }
 
     // 3. 获取寄存器
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 
     if (!target_ptr)
     {
-        printf("❌ 无效寄存器\n");
+        printf(" 无效寄存器\n");
         ptrace_detach(pid);
         return 1;
     }
@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) < 0)
         die("SETREGSET failed");
     ptrace_detach(pid);
-    printf("✅ 完成\n");
+    printf(" 完成\n");
 
     return 0;
 }

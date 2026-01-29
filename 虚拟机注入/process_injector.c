@@ -33,28 +33,28 @@ void inject_process(const char *target, int action_type)
     int pid = get_vm_pid(target);
     if (pid == -1)
     {
-        printf("❌ [错误] 未找到进程: %s\n", target);
+        printf(" [错误] 未找到进程: %s\n", target);
         exit(1);
     }
 
     if (action_type == 1)
     { // Crash
         kill(pid, SIGKILL);
-        printf("💥 [Crash] 已杀死进程 (PID: %d)\n", pid);
+        printf(" [Crash] 已杀死进程 (PID: %d)\n", pid);
     }
     else if (action_type == 2)
     { // Hang
         kill(pid, SIGSTOP);
-        printf("❄️  [Hang] 已暂停进程 (PID: %d)\n", pid);
+        printf("  [Hang] 已暂停进程 (PID: %d)\n", pid);
     }
     else if (action_type == 3)
     { // Resume
         kill(pid, SIGCONT);
-        printf("▶️  [Resume] 已恢复进程 (PID: %d)\n", pid);
+        printf("  [Resume] 已恢复进程 (PID: %d)\n", pid);
     }
     else
     {
-        printf("❌ 未知操作类型\n");
+        printf(" 未知操作类型\n");
     }
 }
 

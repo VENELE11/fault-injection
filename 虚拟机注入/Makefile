@@ -1,5 +1,5 @@
 # Makefile for 虚拟机注入 tools (增强版)
-# 基于论文《云计算系统故障注入平台的研究与设计》
+# 
 # 用于编译虚拟机内部/KVM虚拟化层的故障注入工具
 
 CC = gcc
@@ -65,7 +65,7 @@ reg_injector: reg_injector.c
 fault_controller: fault_controller.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-# KVM层注入器 (论文4.1.2)
+# KVM层注入器
 kvm_injector: kvm_injector.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
 
@@ -90,7 +90,7 @@ clean:
 # 帮助
 help:
 	@echo "虚拟机注入工具集 Makefile v2.0 (增强版)"
-	@echo "基于论文《云计算系统故障注入平台的研究与设计》"
+	@echo ""
 	@echo ""
 	@echo "用法: make [target]"
 	@echo ""
@@ -102,7 +102,7 @@ help:
 	@echo "  clean   - 清理所有编译产物"
 	@echo "  help    - 显示此帮助信息"
 	@echo ""
-	@echo "KVM注入器功能 (论文第4章):"
+	@echo "KVM注入器功能:"
 	@echo "  - 软错误注入 (4.1.2.1): 位翻转/交换/覆盖"
 	@echo "  - 客户OS错误行为 (4.1.2.2): 数据段修改/异常触发"
 	@echo "  - 性能故障 (4.1.2.3): ioctl延迟模拟"

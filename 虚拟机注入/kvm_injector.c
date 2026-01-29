@@ -1,13 +1,13 @@
 /*
  * kvm_injector.c - KVM虚拟化层故障注入工具 (增强版)
- * 基于论文《云计算系统故障注入平台的研究与设计》(柴森, 2016)
+ * (柴森, 2016)
  * 
  * 功能：针对KVM虚拟化层进行多种故障注入
  * 支持：
- *   - 软错误注入：寄存器位翻转、交换、覆盖 (论文4.1.2.1 表4-5)
- *   - 客户OS错误行为：随机修改进程状态 (论文4.1.2.2)
- *   - 性能故障：qemu-kvm ioctl延迟 (论文4.1.2.3)
- *   - 维护故障：CPU热插拔 (论文4.1.2.4)
+ *   - 软错误注入：寄存器位翻转、交换、覆盖
+ *   - 客户OS错误行为：随机修改进程状态
+ *   - 性能故障：qemu-kvm ioctl延迟
+ *   - 维护故障：CPU热插拔
  * 
  * 编译：gcc -o kvm_injector kvm_injector.c -lpthread
  */
@@ -27,15 +27,15 @@
 #include <pthread.h>
 #include <errno.h>
 
-// === 故障类型枚举 (论文4.1.2) ===
+// === 故障类型枚举 ===
 typedef enum {
-    KVM_FAULT_SOFT_ERROR = 1,      // 软错误 (论文4.1.2.1)
-    KVM_FAULT_GUEST_BEHAVIOR = 2,  // 客户OS错误行为 (论文4.1.2.2)
-    KVM_FAULT_PERFORMANCE = 3,     // 性能故障 (论文4.1.2.3)
-    KVM_FAULT_MAINTENANCE = 4      // 维护故障 (论文4.1.2.4)
+    KVM_FAULT_SOFT_ERROR = 1,      // 软错误
+    KVM_FAULT_GUEST_BEHAVIOR = 2,  // 客户OS错误行为
+    KVM_FAULT_PERFORMANCE = 3,     // 性能故障
+    KVM_FAULT_MAINTENANCE = 4      // 维护故障
 } KVMFaultType;
 
-// === 软错误类型 (论文表4-5) ===
+// === 软错误类型 ===
 typedef enum {
     SOFT_ERROR_BIT_FLIP = 1,       // 一位或多位翻转
     SOFT_ERROR_SWAP = 2,           // 两位交换
@@ -76,7 +76,7 @@ void list_kvm_vms() {
     int *pids = find_qemu_pids(&count);
     
     if (count == 0) {
-        printf("║   ℹ️  未发现运行中的KVM虚拟机                               ║\n");
+        printf("║     未发现运行中的KVM虚拟机                               ║\n");
     } else {
         for (int i = 0; i < count; i++) {
             char cmd[256];
@@ -93,7 +93,7 @@ void list_kvm_vms() {
             }
             if (fp) pclose(fp);
             
-            printf("║   ✅ VM: %-20s  PID: %-6d               ║\n", name, pids[i]);
+            printf("║    VM: %-20s  PID: %-6d               ║\n", name, pids[i]);
         }
         printf("║   总计: %d 个虚拟机正在运行                                 ║\n", count);
     }
@@ -130,7 +130,7 @@ void list_kvm_vms() {
     printf("╚══════════════════════════════════════════════════════════════╝\n\n");
 }
 
-// === 模块1：软错误注入 (论文4.1.2.1 表4-5) ===
+// === 模块1：软错误注入 ===
 // 通过外部调用reg_injector实现
 int inject_soft_error(int pid, SoftErrorType error_type, const char *target_reg, int bit) {
     char cmd[512];
@@ -147,18 +147,18 @@ int inject_soft_error(int pid, SoftErrorType error_type, const char *target_reg,
             type_str = "zero1";  // 覆盖为0
             break;
         case SOFT_ERROR_NOP:
-            printf("⚠️  NOP注入需要内存注入器支持\n");
+            printf("  NOP注入需要内存注入器支持\n");
             return -1;
         default:
-            printf("❌ 未知的软错误类型\n");
+            printf(" 未知的软错误类型\n");
             return -1;
     }
     
-    printf("💫 [软错误注入] (论文4.1.2.1)\n");
+    printf(" [软错误注入]\n");
     printf("   目标PID: %d, 寄存器: %s, 类型: %s\n", pid, target_reg, type_str);
     
     if (access("./reg_injector", F_OK) != 0) {
-        printf("⚠️  未找到reg_injector，尝试编译...\n");
+        printf("  未找到reg_injector，尝试编译...\n");
         system("gcc -o reg_injector reg_injector.c 2>/dev/null");
     }
     
@@ -171,11 +171,11 @@ int inject_soft_error(int pid, SoftErrorType error_type, const char *target_reg,
     return system(cmd);
 }
 
-// === 模块2：客户OS错误行为注入 (论文4.1.2.2) ===
+// === 模块2：客户OS错误行为注入 ===
 int inject_guest_behavior_fault(int pid, int behavior_type) {
     char cmd[512];
     
-    printf("🐛 [客户OS错误行为注入] (论文4.1.2.2)\n");
+    printf(" [客户OS错误行为注入]\n");
     
     switch (behavior_type) {
         case 1: // 随机修改数据段
@@ -195,25 +195,25 @@ int inject_guest_behavior_fault(int pid, int behavior_type) {
         case 3: // 触发无效指令
             printf("   类型: 模拟无效操作异常\n");
             // 通过修改PC寄存器导致执行无效指令
-            printf("   ⚠️  警告: 这可能导致客户OS崩溃!\n");
+            printf("     警告: 这可能导致客户OS崩溃!\n");
             snprintf(cmd, sizeof(cmd), "./reg_injector %d PC add1", pid);
             return system(cmd);
             
         default:
-            printf("❌ 未知的错误行为类型\n");
+            printf(" 未知的错误行为类型\n");
             return -1;
     }
     
-    printf("⚠️  需要相应的注入器工具\n");
+    printf("  需要相应的注入器工具\n");
     return -1;
 }
 
-// === 模块3：性能故障注入 (论文4.1.2.3 ioctl延迟) ===
+// === 模块3：性能故障注入 ===
 // 通过cgroups限制CPU来间接实现延迟效果
 int inject_performance_fault(int pid, int delay_ms) {
     char cmd[512];
     
-    printf("⏱️  [性能故障注入] (论文4.1.2.3)\n");
+    printf("  [性能故障注入]\n");
     printf("   目标PID: %d, 延迟: %dms\n", pid, delay_ms);
     
     if (delay_ms <= 0) {
@@ -221,7 +221,7 @@ int inject_performance_fault(int pid, int delay_ms) {
         snprintf(cmd, sizeof(cmd),
                  "echo %d > /sys/fs/cgroup/cpu/tasks 2>/dev/null", pid);
         system(cmd);
-        printf("✅ 已清理性能限制\n");
+        printf(" 已清理性能限制\n");
         return 0;
     }
     
@@ -260,16 +260,16 @@ int inject_performance_fault(int pid, int delay_ms) {
     return 0;
 }
 
-// === 模块4：CPU热插拔维护故障 (论文4.1.2.4) ===
+// === 模块4：CPU热插拔维护故障 ===
 int inject_cpu_hotplug_fault(int cpu_id, int online) {
     char path[128];
     char cmd[256];
     
-    printf("🔌 [CPU热插拔故障] (论文4.1.2.4)\n");
+    printf(" [CPU热插拔故障]\n");
     
     // CPU0通常不能下线
     if (cpu_id == 0 && !online) {
-        printf("⚠️  CPU0通常不能下线，尝试CPU1\n");
+        printf("  CPU0通常不能下线，尝试CPU1\n");
         cpu_id = 1;
     }
     
@@ -277,7 +277,7 @@ int inject_cpu_hotplug_fault(int cpu_id, int online) {
     
     // 检查文件是否存在
     if (access(path, F_OK) != 0) {
-        printf("❌ CPU%d 不支持热插拔或不存在\n", cpu_id);
+        printf(" CPU%d 不支持热插拔或不存在\n", cpu_id);
         return -1;
     }
     
@@ -293,9 +293,9 @@ int inject_cpu_hotplug_fault(int cpu_id, int online) {
     int ret = system(cmd);
     
     if (ret == 0) {
-        printf("✅ CPU%d 已%s\n", cpu_id, online ? "上线" : "下线");
+        printf(" CPU%d 已%s\n", cpu_id, online ? "上线" : "下线");
     } else {
-        printf("❌ 操作失败 (可能需要root权限或内核不支持)\n");
+        printf(" 操作失败 (可能需要root权限或内核不支持)\n");
     }
     
     return ret;
@@ -303,7 +303,7 @@ int inject_cpu_hotplug_fault(int cpu_id, int online) {
 
 // === 清理所有注入的故障 ===
 void clear_all_faults() {
-    printf("\n🧹 [清理所有KVM故障]\n");
+    printf("\n [清理所有KVM故障]\n");
     
     // 清理cgroups限制
     system("rmdir /sys/fs/cgroup/cpu/qemu_throttle 2>/dev/null");
@@ -320,35 +320,35 @@ void clear_all_faults() {
     // 停止cpulimit
     system("pkill cpulimit 2>/dev/null");
     
-    printf("✅ 故障清理完成\n");
+    printf(" 故障清理完成\n");
 }
 
 // === 打印帮助 ===
 void print_usage(const char *prog) {
     printf("\n╔═══════════════════════════════════════════════════════════════════╗\n");
     printf("║         KVM虚拟化层故障注入工具 v2.0                              ║\n");
-    printf("║   基于论文《云计算系统故障注入平台的研究与设计》                  ║\n");
+    printf("║                     ║\n");
     printf("╚═══════════════════════════════════════════════════════════════════╝\n\n");
     printf("用法: %s <命令> [参数]\n\n", prog);
     
     printf("【虚拟机管理】\n");
     printf("  list                          列出所有KVM虚拟机状态\n\n");
     
-    printf("【软错误注入】(论文4.1.2.1 表4-5)\n");
+    printf("【软错误注入】\n");
     printf("  soft-flip <PID> <寄存器> [位]  位翻转故障\n");
     printf("  soft-swap <PID> <寄存器>       两位交换故障\n");
     printf("  soft-zero <PID> <寄存器> [位]  位置零覆盖\n\n");
     
-    printf("【客户OS错误行为】(论文4.1.2.2)\n");
+    printf("【客户OS错误行为】\n");
     printf("  guest-data <PID>               随机修改数据段\n");
     printf("  guest-divzero <PID>            模拟除零异常\n");
     printf("  guest-invalid <PID>            模拟无效指令\n\n");
     
-    printf("【性能故障】(论文4.1.2.3)\n");
+    printf("【性能故障】\n");
     printf("  perf-delay <PID> <毫秒>        注入执行延迟\n");
     printf("  perf-clear <PID>               清理性能限制\n\n");
     
-    printf("【维护故障】(论文4.1.2.4 CPU热插拔)\n");
+    printf("【维护故障】\n");
     printf("  cpu-offline <CPU号>            下线指定CPU\n");
     printf("  cpu-online <CPU号>             上线指定CPU\n\n");
     
@@ -376,7 +376,7 @@ int main(int argc, char *argv[]) {
     
     // 检查root权限
     if (geteuid() != 0) {
-        printf("⚠️  警告: 大部分功能需要root权限\n");
+        printf("  警告: 大部分功能需要root权限\n");
     }
     
     const char *command = argv[1];
@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
     // 软错误
     else if (strcmp(command, "soft-flip") == 0) {
         if (argc < 4) {
-            printf("❌ 用法: %s soft-flip <PID> <寄存器> [位]\n", argv[0]);
+            printf(" 用法: %s soft-flip <PID> <寄存器> [位]\n", argv[0]);
             return 1;
         }
         int pid = atoi(argv[2]);
@@ -397,7 +397,7 @@ int main(int argc, char *argv[]) {
     }
     else if (strcmp(command, "soft-swap") == 0) {
         if (argc < 4) {
-            printf("❌ 用法: %s soft-swap <PID> <寄存器>\n", argv[0]);
+            printf(" 用法: %s soft-swap <PID> <寄存器>\n", argv[0]);
             return 1;
         }
         int pid = atoi(argv[2]);
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
     }
     else if (strcmp(command, "soft-zero") == 0) {
         if (argc < 4) {
-            printf("❌ 用法: %s soft-zero <PID> <寄存器> [位]\n", argv[0]);
+            printf(" 用法: %s soft-zero <PID> <寄存器> [位]\n", argv[0]);
             return 1;
         }
         int pid = atoi(argv[2]);
@@ -415,21 +415,21 @@ int main(int argc, char *argv[]) {
     // 客户OS错误行为
     else if (strcmp(command, "guest-data") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s guest-data <PID>\n", argv[0]);
+            printf(" 用法: %s guest-data <PID>\n", argv[0]);
             return 1;
         }
         inject_guest_behavior_fault(atoi(argv[2]), 1);
     }
     else if (strcmp(command, "guest-divzero") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s guest-divzero <PID>\n", argv[0]);
+            printf(" 用法: %s guest-divzero <PID>\n", argv[0]);
             return 1;
         }
         inject_guest_behavior_fault(atoi(argv[2]), 2);
     }
     else if (strcmp(command, "guest-invalid") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s guest-invalid <PID>\n", argv[0]);
+            printf(" 用法: %s guest-invalid <PID>\n", argv[0]);
             return 1;
         }
         inject_guest_behavior_fault(atoi(argv[2]), 3);
@@ -437,14 +437,14 @@ int main(int argc, char *argv[]) {
     // 性能故障
     else if (strcmp(command, "perf-delay") == 0) {
         if (argc < 4) {
-            printf("❌ 用法: %s perf-delay <PID> <毫秒>\n", argv[0]);
+            printf(" 用法: %s perf-delay <PID> <毫秒>\n", argv[0]);
             return 1;
         }
         inject_performance_fault(atoi(argv[2]), atoi(argv[3]));
     }
     else if (strcmp(command, "perf-clear") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s perf-clear <PID>\n", argv[0]);
+            printf(" 用法: %s perf-clear <PID>\n", argv[0]);
             return 1;
         }
         inject_performance_fault(atoi(argv[2]), 0);
@@ -452,14 +452,14 @@ int main(int argc, char *argv[]) {
     // CPU热插拔
     else if (strcmp(command, "cpu-offline") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s cpu-offline <CPU号>\n", argv[0]);
+            printf(" 用法: %s cpu-offline <CPU号>\n", argv[0]);
             return 1;
         }
         inject_cpu_hotplug_fault(atoi(argv[2]), 0);
     }
     else if (strcmp(command, "cpu-online") == 0) {
         if (argc < 3) {
-            printf("❌ 用法: %s cpu-online <CPU号>\n", argv[0]);
+            printf(" 用法: %s cpu-online <CPU号>\n", argv[0]);
             return 1;
         }
         inject_cpu_hotplug_fault(atoi(argv[2]), 1);
@@ -472,7 +472,7 @@ int main(int argc, char *argv[]) {
         print_usage(argv[0]);
     }
     else {
-        printf("❌ 未知命令: %s\n", command);
+        printf(" 未知命令: %s\n", command);
         print_usage(argv[0]);
         return 1;
     }

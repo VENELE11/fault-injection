@@ -170,7 +170,7 @@ sudo ./cluster_controller
 *   **CloudStack 故障**: API 响应超时、虚拟机创建失败、Agent 断连告警。
 
 ## 5. 注意事项
-*   ⚠️ **高风险**: `kvm注入` 修改内核行为，极易导致宿主机 Kernel Panic (死机)。请务必在测试环境中运行，严禁用于生产环境。
+*    **高风险**: `kvm注入` 修改内核行为，极易导致宿主机 Kernel Panic (死机)。请务必在测试环境中运行，严禁用于生产环境。
 *   **版本兼容**: 部分 KVM 注入模块依赖特定内核符号 (如 `kernel_clone` vs `_do_fork`)，如果加载失败，请根据 `kvm注入/README.md` 中的指南适配当前内核版本。
 *   **快照建议**: 在进行任何故障注入前，建议对虚拟机创建快照，以便快速恢复。
     *   UTM: 在 UTM 界面右键点击虚拟机 -> "Snapshots" -> "Take Snapshot"

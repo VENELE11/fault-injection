@@ -1,5 +1,5 @@
 # Makefile for Hadoop Fault Injection (增强版)
-# 基于论文《云计算系统故障注入平台的研究与设计》
+# 
 # Hadoop 集群故障注入工具编译配置
 
 CC = gcc

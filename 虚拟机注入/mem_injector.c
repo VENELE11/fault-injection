@@ -194,7 +194,7 @@ unsigned long scan_memory_for_pattern(pid_t pid, TargetRegion region, unsigned l
 
         if ((unsigned long)data == signature)
         {
-            printf("[+] 🎯 命中目标！地址: 0x%lx (值: 0x%lx)\n", curr, data);
+            printf("[+]  命中目标！地址: 0x%lx (值: 0x%lx)\n", curr, data);
             return curr;
         }
     }

@@ -22,11 +22,11 @@ elif [ "$NODE" == "slave2" ]; then
     SUFFIX="12"
     HOST_PORT="2222"
 else
-    echo "❌ 错误: 未知节点名 '$NODE'"
+    echo " 错误: 未知节点名 '$NODE'"
     exit 1
 fi
 
-echo "🚀 启动节点: $NODE (SSH端口: $HOST_PORT, 内部MAC后缀: $SUFFIX) ..."
+echo " 启动节点: $NODE (SSH端口: $HOST_PORT, 内部MAC后缀: $SUFFIX) ..."
 
 # === 启动命令 (双网卡模式) ===
 # net0 (User Mode): 负责连接外网 + 宿主机 SSH 端口转发

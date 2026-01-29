@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     printf("=== CPU 高负载注入器 (Target PID: %d) ===\n", target_pid);
     printf("[配置] 持续时间: %d 秒\n", duration);
     printf("[配置] 压力线程: %d 个 (模拟多核满载)\n", num_threads);
-    printf("🚀 开始注入 CPU 压力...\n");
+    printf(" 开始注入 CPU 压力...\n");
 
     pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
     if (!threads)
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     {
         if (i % 1 == 0)
         {
-            printf("\r⏳ 正在施压... %d/%d 秒", i + 1, duration);
+            printf("\r 正在施压... %d/%d 秒", i + 1, duration);
             fflush(stdout);
         }
         sleep(1);
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
     // 3. 停止并清理
     keep_running = 0;
-    printf("🛑 时间到，停止施压...\n");
+    printf(" 时间到，停止施压...\n");
 
     for (int i = 0; i < num_threads; i++)
     {
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     }
 
     free(threads);
-    printf("✅ CPU 注入结束，资源已释放。\n");
+    printf(" CPU 注入结束，资源已释放。\n");
 
     return 0;
 }

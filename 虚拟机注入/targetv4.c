@@ -27,13 +27,13 @@ int main()
         char *ptr = (char *)malloc(size);
         if (ptr == NULL)
         {
-            printf("❌ 失败! (OOM)\n");
+            printf(" 失败! (OOM)\n");
         }
         else
         {
             // 尝试写入，测试是否会触发 Swap (变慢)
             memset(ptr, 0, size);
-            printf("✅ 成功 (已释放)\n");
+            printf(" 成功 (已释放)\n");
             free(ptr);
         }
 

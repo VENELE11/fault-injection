@@ -53,14 +53,14 @@ void init_hadoop_cluster() {
     strcpy(g_cluster[2].role, "DataNode,NodeManager");
     g_cluster[2].is_active = 1;
     
-    printf("✅ 已加载默认Hadoop集群配置 (3节点)\n");
+    printf(" 已加载默认Hadoop集群配置 (3节点)\n");
 }
 
 // === 从配置文件加载集群 ===
 int load_cluster_config(const char *config_file) {
     FILE *fp = fopen(config_file, "r");
     if (!fp) {
-        printf("⚠️  无法打开配置文件: %s，使用默认配置\n", config_file);
+        printf("  无法打开配置文件: %s，使用默认配置\n", config_file);
         init_hadoop_cluster();
         return -1;
     }
@@ -88,7 +88,7 @@ int load_cluster_config(const char *config_file) {
     }
     
     fclose(fp);
-    printf("✅ 已从 %s 加载 %d 个节点配置\n", config_file, g_node_count);
+    printf(" 已从 %s 加载 %d 个节点配置\n", config_file, g_node_count);
     return 0;
 }
 
@@ -125,7 +125,7 @@ int remote_exec(const char *node_name, const char *cmd) {
     }
     
     if (node_idx < 0) {
-        printf("❌ 未找到节点: %s\n", node_name);
+        printf(" 未找到节点: %s\n", node_name);
         return -1;
     }
     
@@ -205,7 +205,7 @@ void inject_vm_fault(int fault_type) {
             snprintf(cmd, sizeof(cmd), "./network_injector 0");
             break;
         default:
-            printf("❌ 未知的故障类型\n");
+            printf(" 未知的故障类型\n");
             return;
     }
     
@@ -263,7 +263,7 @@ void inject_hadoop_fault(int fault_type) {
             snprintf(cmd, sizeof(cmd), "./hadoop_injector list");
             break;
         default:
-            printf("❌ 未知的故障类型\n");
+            printf(" 未知的故障类型\n");
             return;
     }
     
@@ -316,7 +316,7 @@ void inject_cloudstack_fault(int fault_type) {
             snprintf(cmd, sizeof(cmd), "./cloudstack_injector list");
             break;
         default:
-            printf("❌ 未知的故障类型\n");
+            printf(" 未知的故障类型\n");
             return;
     }
     
@@ -329,16 +329,16 @@ void run_fault_scenario(int scenario) {
     
     switch (scenario) {
         case 1: // 场景1：单节点故障（DataNode宕机）
-            printf("📋 场景: 单个DataNode节点宕机\n");
+            printf(" 场景: 单个DataNode节点宕机\n");
             printf("   预期: HDFS副本机制自动恢复\n");
             local_exec("./hadoop_injector crash dn");
-            printf("\n⏳ 等待30秒后检查集群状态...\n");
+            printf("\n 等待30秒后检查集群状态...\n");
             sleep(3);  // 演示用，实际可能需要更长时间
             local_exec("./hadoop_injector list");
             break;
             
         case 2: // 场景2：网络分区（节点间通信中断）
-            printf("📋 场景: 网络分区 - 隔离一个Slave节点\n");
+            printf(" 场景: 网络分区 - 隔离一个Slave节点\n");
             printf("   预期: 被隔离节点被标记为不可用\n");
             if (g_node_count > 1) {
                 char cmd[256];
@@ -348,26 +348,26 @@ void run_fault_scenario(int scenario) {
             break;
             
         case 3: // 场景3：Master故障（NameNode宕机）
-            printf("📋 场景: NameNode宕机\n");
-            printf("   ⚠️  警告: 这将导致HDFS不可用!\n");
+            printf(" 场景: NameNode宕机\n");
+            printf("     警告: 这将导致HDFS不可用!\n");
             printf("   按Enter继续或Ctrl+C取消...");
             getchar();
             local_exec("./hadoop_injector crash nn");
             break;
             
         case 4: // 场景4：级联故障（网络+进程）
-            printf("📋 场景: 级联故障 - 先注入网络延迟，再注入进程挂起\n");
+            printf(" 场景: 级联故障 - 先注入网络延迟，再注入进程挂起\n");
             local_exec("./network_injector 1 200ms");
             sleep(2);
             local_exec("./hadoop_injector hang dn");
-            printf("\n🔄 3秒后自动恢复...\n");
+            printf("\n 3秒后自动恢复...\n");
             sleep(3);
             local_exec("./hadoop_injector resume dn");
             local_exec("./network_injector 0");
             break;
             
         case 5: // 场景5：资源耗尽
-            printf("📋 场景: CPU资源耗尽\n");
+            printf(" 场景: CPU资源耗尽\n");
             printf("输入持续时间 (秒): ");
             char duration[16];
             if (fgets(duration, sizeof(duration), stdin)) {
@@ -379,7 +379,7 @@ void run_fault_scenario(int scenario) {
             break;
             
         default:
-            printf("❌ 未知的场景\n");
+            printf(" 未知的场景\n");
     }
 }
 
@@ -409,7 +409,7 @@ void clear_all_faults() {
     // 清理磁盘填充文件
     system("rm -f /tmp/hdfs_disk_fill 2>/dev/null");
     
-    printf("\n✅ 所有故障已尝试恢复\n");
+    printf("\n 所有故障已尝试恢复\n");
 }
 
 // === 主菜单 ===
@@ -424,7 +424,7 @@ void show_main_menu() {
     printf("║  [5] 查看集群状态        [6] 一键恢复所有                     ║\n");
     printf("║  [7] 加载集群配置        [q] 退出                             ║\n");
     printf("╚═══════════════════════════════════════════════════════════════╝\n");
-    printf("👉 请选择: ");
+    printf(" 请选择: ");
 }
 
 void show_vm_menu() {
@@ -436,7 +436,7 @@ void show_vm_menu() {
     printf("[5] 网络丢包 (Loss)\n");
     printf("[6] 清理网络故障\n");
     printf("[0] 返回主菜单\n");
-    printf("👉 请选择: ");
+    printf(" 请选择: ");
 }
 
 void show_hadoop_menu() {
@@ -447,7 +447,7 @@ void show_hadoop_menu() {
     printf("[9] 节点网络隔离    [10] 清理网络隔离\n");
     printf("[11] 查看Hadoop进程状态\n");
     printf("[0] 返回主菜单\n");
-    printf("👉 请选择: ");
+    printf(" 请选择: ");
 }
 
 void show_cloudstack_menu() {
@@ -458,18 +458,18 @@ void show_cloudstack_menu() {
     printf("[9] 数据库限制 [10] 恢复数据库\n");
     printf("[11] 查看CloudStack服务状态\n");
     printf("[0] 返回主菜单\n");
-    printf("👉 请选择: ");
+    printf(" 请选择: ");
 }
 
 void show_scenario_menu() {
     printf("\n--- 预设故障场景 ---\n");
     printf("[1] 单节点故障 (DataNode宕机)\n");
     printf("[2] 网络分区 (隔离Slave节点)\n");
-    printf("[3] Master故障 (NameNode宕机) ⚠️危险\n");
+    printf("[3] Master故障 (NameNode宕机) 危险\n");
     printf("[4] 级联故障 (网络+进程)\n");
     printf("[5] 资源耗尽 (CPU)\n");
     printf("[0] 返回主菜单\n");
-    printf("👉 请选择: ");
+    printf(" 请选择: ");
 }
 
 // === 主函数 ===
@@ -479,7 +479,7 @@ int main(int argc, char *argv[]) {
     
     // 检查root权限
     if (geteuid() != 0) {
-        printf("🔴 警告: 请使用 sudo 运行此程序以获得完整功能!\n");
+        printf(" 警告: 请使用 sudo 运行此程序以获得完整功能!\n");
     }
     
     // 初始化默认集群配置
@@ -488,18 +488,18 @@ int main(int argc, char *argv[]) {
     // 检查依赖文件
     if (access("./process_injector", F_OK) != 0 ||
         access("./network_injector", F_OK) != 0) {
-        printf("⚠️  警告: 未找到部分基础注入器，请先编译:\n");
+        printf("  警告: 未找到部分基础注入器，请先编译:\n");
         printf("   gcc -o process_injector process_injector.c\n");
         printf("   gcc -o network_injector network_injector.c\n");
     }
     
     if (access("./hadoop_injector", F_OK) != 0) {
-        printf("⚠️  警告: 未找到hadoop_injector，请编译:\n");
+        printf("  警告: 未找到hadoop_injector，请编译:\n");
         printf("   gcc -o hadoop_injector hadoop_injector.c\n");
     }
     
     if (access("./cloudstack_injector", F_OK) != 0) {
-        printf("⚠️  警告: 未找到cloudstack_injector，请编译:\n");
+        printf("  警告: 未找到cloudstack_injector，请编译:\n");
         printf("   gcc -o cloudstack_injector cloudstack_injector.c\n");
     }
     
@@ -509,7 +509,7 @@ int main(int argc, char *argv[]) {
         input[strcspn(input, "\n")] = 0;
         
         if (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0) {
-            printf("👋 再见！\n");
+            printf(" 再见！\n");
             break;
         }
         
@@ -572,7 +572,7 @@ int main(int argc, char *argv[]) {
                 break;
                 
             default:
-                printf("❌ 无效的选项\n");
+                printf(" 无效的选项\n");
         }
     }
     

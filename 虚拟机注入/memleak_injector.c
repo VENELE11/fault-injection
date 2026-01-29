@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     printf("=== 内存资源耗尽注入器 ===\n");
     printf("目标占用: %d MB\n", size_mb);
     printf("注意：这会触发系统级压力，可能导致 Swap 交换或进程被杀。\n");
-    printf("🚀 开始吞噬内存...\n");
+    printf(" 开始吞噬内存...\n");
 
     // 指针数组，用于防止内存被优化释放
     // 简单起见，我们只分配，不记录所有指针，因为我们不打算 free
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         char *ptr = (char *)malloc(chunk_size);
         if (ptr == NULL)
         {
-            printf("\n❌ malloc 失败！系统内存可能已耗尽。\n");
+            printf("\n malloc 失败！系统内存可能已耗尽。\n");
             break;
         }
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
         usleep(50000); // 50ms
     }
 
-    printf("\n✅ 分配完成。正在保持占用状态 60 秒...\n");
+    printf("\n 分配完成。正在保持占用状态 60 秒...\n");
     printf("此时请观察靶子程序的反应 (或使用 'free -h' 查看)\n");
 
     // 保持占用 60 秒，期间这部分内存无法被其他进程使用
