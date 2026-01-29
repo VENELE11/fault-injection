@@ -1,6 +1,5 @@
 /*
  * kvm_injector.c - KVM虚拟化层故障注入工具 (增强版)
- * (柴森, 2016)
  * 
  * 功能：针对KVM虚拟化层进行多种故障注入
  * 支持：
@@ -259,7 +258,44 @@ int inject_performance_fault(int pid, int delay_ms) {
     
     return 0;
 }
+// === 模块：CPU 高负载注入 (基于资源争抢) ===
+int inject_cpu_stress(int pid, int duration, int threads)
+{
+    char cmd[512];
 
+    printf(" [CPU高负载注入]\n");
+    // 如果 threads 为 0，说明用户没指定，交给 cpu_injector 自动判断
+    if (threads <= 0)
+        printf("   目标PID: %d (伴随压力), 持续: %d秒, 线程: 自动(全核)\n", pid, duration);
+    else
+        printf("   目标PID: %d (伴随压力), 持续: %d秒, 线程: %d\n", pid, duration, threads);
+
+    // 1. 自动检查并编译 cpu_injector
+    if (access("./cpu_injector", F_OK) != 0)
+    {
+        printf("  未找到 cpu_injector，尝试自动编译...\n");
+        int ret = system("gcc -o cpu_injector cpu_injector.c -lpthread -lm 2>/dev/null");
+        if (ret != 0)
+        {
+            printf("  [错误] 编译失败！请确认 cpu_injector.c 存在且已安装 gcc。\n");
+            return -1;
+        }
+    }
+
+    // 2. 构造调用命令
+    // 对应 cpu_injector 的参数: <PID> <Duration> [Threads]
+    if (threads > 0)
+    {
+        snprintf(cmd, sizeof(cmd), "./cpu_injector %d %d %d", pid, duration, threads);
+    }
+    else
+    {
+        snprintf(cmd, sizeof(cmd), "./cpu_injector %d %d", pid, duration);
+    }
+
+    // 3. 执行
+    return system(cmd);
+}
 // === 模块4：CPU热插拔维护故障 ===
 int inject_cpu_hotplug_fault(int cpu_id, int online) {
     char path[128];
@@ -346,6 +382,7 @@ void print_usage(const char *prog) {
     
     printf("【性能故障】\n");
     printf("  perf-delay <PID> <毫秒>        注入执行延迟\n");
+    printf("  perf-stress <PID> <秒> [线程]  注入CPU高负载 (资源争抢)\n");
     printf("  perf-clear <PID>               清理性能限制\n\n");
     
     printf("【维护故障】\n");
@@ -448,6 +485,18 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         inject_performance_fault(atoi(argv[2]), 0);
+    }
+    else if (strcmp(command, "perf-stress") == 0)
+    {
+        if (argc < 4)
+        {
+            printf(" 用法: %s perf-stress <PID> <持续秒数> [线程数]\n", argv[0]);
+            return 1;
+        }
+        int pid = atoi(argv[2]);
+        int duration = atoi(argv[3]);
+        int threads = (argc >= 5) ? atoi(argv[4]) : 0; // 0 表示默认
+        inject_cpu_stress(pid, duration, threads);
     }
     // CPU热插拔
     else if (strcmp(command, "cpu-offline") == 0) {
