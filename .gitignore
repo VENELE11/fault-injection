@@ -9,6 +9,7 @@
 虚拟机注入/hadoop_injector
 虚拟机注入/cloudstack_injector
 虚拟机注入/cluster_controller
+虚拟机注入/kvm_injector
 虚拟机注入/target
 虚拟机注入/target_v2
 虚拟机注入/target_cpu
