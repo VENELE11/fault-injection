@@ -1,8 +1,16 @@
 /*
- * cloudstack_injector.c - CloudStack云平台故障注入工具
- * 功能：针对CloudStack云计算平台进行故障注入
- * 支持：Management Server, Agent, 虚拟机, 存储等故障模拟
- * 编译：gcc -o cloudstack_injector cloudstack_injector.c
+ * cloudstack_injector.c - CloudStack云平台故障注入工具 (增强版)
+ * 基于论文《云计算系统故障注入平台的研究与设计》(柴森, 2016)
+ * 
+ * 功能：针对CloudStack云计算平台进行多层次故障注入
+ * 支持：
+ *   - 存储故障：主存储、二级存储读写故障 (论文4.1.3.1)
+ *   - 系统虚拟机故障：SSVM、CPVM、VR故障 (论文4.1.3.2)
+ *   - 网络故障：管理节点与各组件间通信故障 (论文4.1.3.3)
+ *   - 管理节点资源故障：CPU/内存占用 (论文4.1.3.4)
+ *   - 虚拟机操作故障：创建、迁移、资源分配故障
+ * 
+ * 编译：gcc -o cloudstack_injector cloudstack_injector.c -lpthread
  */
 
 #include <stdio.h>
@@ -12,7 +20,11 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <time.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 // === CloudStack组件进程名定义 ===
 #define CS_MANAGEMENT "cloudstack-management"
@@ -21,25 +33,38 @@
 #define MYSQL_PROC "mysqld"
 #define NFS_PROC "nfsd"
 #define LIBVIRTD_PROC "libvirtd"
+// 系统虚拟机相关 (论文4.1.3.2)
+#define SSVM_PROC "systemvm"              // 二级存储虚拟机
+#define CPVM_PROC "consoleproxy"          // 控制台代理虚拟机
+#define VR_PROC "router"                   // 虚拟路由器
 
 // === CloudStack默认端口 ===
 #define CS_API_PORT 8080
 #define CS_AGENT_PORT 8250
 #define CS_CONSOLE_PORT 8443
+#define CS_CLUSTER_PORT 9090
+#define MYSQL_PORT 3306
+#define NFS_PORT 2049
 
-// === 故障类型枚举 ===
+// === 故障类型枚举 (扩展版) ===
 typedef enum {
-    CS_FAULT_CRASH = 1,          // 进程崩溃
-    CS_FAULT_HANG = 2,           // 进程挂起
-    CS_FAULT_RESUME = 3,         // 恢复进程
-    CS_FAULT_API_DELAY = 4,      // API响应延迟
-    CS_FAULT_NETWORK = 5,        // 网络故障
-    CS_FAULT_DB_SLOW = 6,        // 数据库慢查询
-    CS_FAULT_STORAGE = 7,        // 存储故障
-    CS_FAULT_AGENT_DISCONNECT = 8 // Agent断连
+    CS_FAULT_CRASH = 1,              // 进程崩溃
+    CS_FAULT_HANG = 2,               // 进程挂起
+    CS_FAULT_RESUME = 3,             // 恢复进程
+    CS_FAULT_API_DELAY = 4,          // API响应延迟
+    CS_FAULT_NETWORK = 5,            // 网络故障
+    CS_FAULT_DB_SLOW = 6,            // 数据库慢查询
+    CS_FAULT_STORAGE_READ = 7,       // 存储读故障 (论文4.1.3.1)
+    CS_FAULT_STORAGE_WRITE = 8,      // 存储写故障
+    CS_FAULT_AGENT_DISCONNECT = 9,   // Agent断连
+    CS_FAULT_SYSVM = 10,             // 系统虚拟机故障 (论文4.1.3.2)
+    CS_FAULT_VM_CREATE = 11,         // 虚拟机创建故障
+    CS_FAULT_VM_MIGRATE = 12,        // 虚拟机迁移故障
+    CS_FAULT_CPU_STRESS = 13,        // CPU资源耗尽 (论文4.1.3.4)
+    CS_FAULT_MEM_STRESS = 14         // 内存资源耗尽
 } CloudStackFaultType;
 
-// === 组件类型枚举 ===
+// === 组件类型枚举 (扩展版) ===
 typedef enum {
     CS_COMPONENT_ALL = 0,
     CS_COMPONENT_MANAGEMENT = 1,
@@ -47,8 +72,26 @@ typedef enum {
     CS_COMPONENT_USAGE = 3,
     CS_COMPONENT_MYSQL = 4,
     CS_COMPONENT_NFS = 5,
-    CS_COMPONENT_LIBVIRT = 6
+    CS_COMPONENT_LIBVIRT = 6,
+    // 系统虚拟机 (论文4.1.3.2)
+    CS_COMPONENT_SSVM = 7,           // 二级存储虚拟机
+    CS_COMPONENT_CPVM = 8,           // 控制台代理虚拟机
+    CS_COMPONENT_VR = 9              // 虚拟路由器
 } CloudStackComponent;
+
+// === 故障模型5元组 (论文3.2.2 表3-3) ===
+typedef struct {
+    char layer[32];          // 故障层次 (CloudStack)
+    char tool[64];           // 故障工具名
+    char ip[32];             // 故障位置 (IP地址)
+    char timestamp[32];      // 故障发生时间
+    char params[128];        // 故障参数
+} CSFaultModel;
+
+// === 全局变量 ===
+static volatile int g_stress_running = 0;
+static pthread_t *g_stress_threads = NULL;
+static int g_stress_thread_count = 0;
 
 // === 辅助函数：获取进程名 ===
 const char* get_cs_component_name(CloudStackComponent component) {
@@ -59,8 +102,38 @@ const char* get_cs_component_name(CloudStackComponent component) {
         case CS_COMPONENT_MYSQL: return MYSQL_PROC;
         case CS_COMPONENT_NFS: return NFS_PROC;
         case CS_COMPONENT_LIBVIRT: return LIBVIRTD_PROC;
+        case CS_COMPONENT_SSVM: return SSVM_PROC;
+        case CS_COMPONENT_CPVM: return CPVM_PROC;
+        case CS_COMPONENT_VR: return VR_PROC;
         default: return NULL;
     }
+}
+
+// === 辅助函数：获取组件中文描述 ===
+const char* get_cs_component_desc(CloudStackComponent component) {
+    switch (component) {
+        case CS_COMPONENT_MANAGEMENT: return "Management Server (管理节点)";
+        case CS_COMPONENT_AGENT: return "CloudStack Agent (计算节点代理)";
+        case CS_COMPONENT_USAGE: return "Usage Server (用量统计)";
+        case CS_COMPONENT_MYSQL: return "MySQL Database (数据库)";
+        case CS_COMPONENT_NFS: return "NFS Server (网络存储)";
+        case CS_COMPONENT_LIBVIRT: return "Libvirtd (虚拟化服务)";
+        case CS_COMPONENT_SSVM: return "Secondary Storage VM (二级存储虚拟机)";
+        case CS_COMPONENT_CPVM: return "Console Proxy VM (控制台代理虚拟机)";
+        case CS_COMPONENT_VR: return "Virtual Router (虚拟路由器)";
+        default: return "未知组件";
+    }
+}
+
+// === 辅助函数：获取默认网卡 ===
+void get_default_nic(char *nic, size_t size) {
+    FILE *fp = popen("ip route get 8.8.8.8 2>/dev/null | awk '{print $5; exit}'", "r");
+    if (fp == NULL || fgets(nic, size, fp) == NULL) {
+        strcpy(nic, "eth0");
+    } else {
+        nic[strcspn(nic, "\n")] = 0;
+    }
+    if (fp) pclose(fp);
 }
 
 // === 辅助函数：查找CloudStack进程PID ===
@@ -316,23 +389,25 @@ int inject_db_fault(int fault_type, const char *param) {
     return ret;
 }
 
-// === 模块5：存储故障注入 ===
+// === 模块5：存储故障注入 (论文4.1.3.1 VFS层故障注入) ===
 int inject_storage_fault(int fault_type, const char *mount_point) {
     char cmd[512];
     
     switch (fault_type) {
-        case 1: // 模拟NFS挂载断开
+        case 1: // 模拟NFS挂载断开 (论文表4-6 NFS主存储故障)
             if (mount_point) {
                 snprintf(cmd, sizeof(cmd), "umount -l %s 2>/dev/null", mount_point);
                 printf("💾 [Storage] 卸载存储: %s\n", mount_point);
+                printf("   预期: CloudStack将检测到存储不可用\n");
             }
             break;
             
-        case 2: // 设置存储为只读
+        case 2: // 设置存储为只读 (论文4.1.3.1 写失效)
             if (mount_point) {
                 snprintf(cmd, sizeof(cmd), 
                          "mount -o remount,ro %s 2>/dev/null", mount_point);
-                printf("📁 [Storage] 设置 %s 为只读\n", mount_point);
+                printf("📁 [Storage] 设置 %s 为只读 (模拟写失效)\n", mount_point);
+                printf("   预期: 虚拟机创建/快照等写操作将失败\n");
             }
             break;
             
@@ -422,43 +497,246 @@ int inject_agent_fault(int fault_type, const char *agent_ip) {
     return 0;
 }
 
+// === 模块7：系统虚拟机故障注入 (论文4.1.3.2 表4-7) ===
+int inject_sysvm_fault(int vm_type, int fault_type) {
+    char cmd[1024];
+    char vm_name[64] = "";
+    char vm_type_name[64] = "";
+    
+    // 确定系统虚拟机类型
+    switch (vm_type) {
+        case 1: // 二级存储虚拟机
+            strcpy(vm_name, "s-*-VM");
+            strcpy(vm_type_name, "Secondary Storage VM");
+            break;
+        case 2: // 控制台代理虚拟机
+            strcpy(vm_name, "v-*-VM");
+            strcpy(vm_type_name, "Console Proxy VM");
+            break;
+        case 3: // 虚拟路由器
+            strcpy(vm_name, "r-*-VM");
+            strcpy(vm_type_name, "Virtual Router");
+            break;
+        default:
+            printf("❌ 未知的系统虚拟机类型\n");
+            return -1;
+    }
+    
+    printf("🖥️  [SystemVM] 目标: %s\n", vm_type_name);
+    
+    // 查找系统虚拟机
+    snprintf(cmd, sizeof(cmd), 
+             "virsh list --name 2>/dev/null | grep -E '^[svr]-[0-9]+-VM$' | head -n 1");
+    
+    FILE *fp = popen(cmd, "r");
+    char vm_domain[128] = "";
+    if (fp && fgets(vm_domain, sizeof(vm_domain), fp)) {
+        vm_domain[strcspn(vm_domain, "\n")] = 0;
+        pclose(fp);
+    } else {
+        if (fp) pclose(fp);
+        printf("❌ 未找到系统虚拟机 (请确保CloudStack正在运行)\n");
+        return -1;
+    }
+    
+    switch (fault_type) {
+        case CS_FAULT_CRASH:
+            snprintf(cmd, sizeof(cmd), "virsh destroy %s 2>/dev/null", vm_domain);
+            printf("💥 [SystemVM] 强制关闭 %s (%s)\n", vm_type_name, vm_domain);
+            printf("   预期: CloudStack会检测到系统虚拟机异常并尝试重启\n");
+            break;
+            
+        case CS_FAULT_HANG:
+            snprintf(cmd, sizeof(cmd), "virsh suspend %s 2>/dev/null", vm_domain);
+            printf("❄️  [SystemVM] 挂起 %s (%s)\n", vm_type_name, vm_domain);
+            break;
+            
+        case CS_FAULT_RESUME:
+            snprintf(cmd, sizeof(cmd), "virsh resume %s 2>/dev/null", vm_domain);
+            printf("▶️  [SystemVM] 恢复 %s (%s)\n", vm_type_name, vm_domain);
+            break;
+            
+        default:
+            printf("❌ 不支持的故障类型\n");
+            return -1;
+    }
+    
+    return system(cmd);
+}
+
+// === 模块8：CPU资源耗尽注入 (论文4.1.3.4 表4-9) ===
+void* cs_cpu_stress_worker(void *arg) {
+    double x = 0.0;
+    while (g_stress_running) {
+        x = x + 0.1;
+        if (x > 1000000) x = 0;
+    }
+    return NULL;
+}
+
+int inject_cs_cpu_stress(int duration_sec, int num_threads) {
+    if (num_threads <= 0) {
+        num_threads = sysconf(_SC_NPROCESSORS_ONLN);
+    }
+    
+    printf("🔥 [CPU Stress] 管理节点CPU压力测试: %d线程, %d秒\n", 
+           num_threads, duration_sec);
+    printf("   预期: 管理节点响应变慢，部分控制命令可能无法执行\n");
+    
+    g_stress_running = 1;
+    g_stress_thread_count = num_threads;
+    g_stress_threads = malloc(num_threads * sizeof(pthread_t));
+    
+    if (!g_stress_threads) {
+        perror("malloc failed");
+        return -1;
+    }
+    
+    for (int i = 0; i < num_threads; i++) {
+        pthread_create(&g_stress_threads[i], NULL, cs_cpu_stress_worker, NULL);
+    }
+    
+    sleep(duration_sec);
+    
+    g_stress_running = 0;
+    for (int i = 0; i < num_threads; i++) {
+        pthread_join(g_stress_threads[i], NULL);
+    }
+    
+    free(g_stress_threads);
+    g_stress_threads = NULL;
+    
+    printf("✅ [CPU Stress] 压力测试完成\n");
+    return 0;
+}
+
+// === 模块9：内存资源耗尽注入 (论文4.1.3.4 表4-9) ===
+int inject_cs_memory_stress(int size_mb) {
+    char cmd[256];
+    
+    if (size_mb <= 0) {
+        snprintf(cmd, sizeof(cmd), "rm -f /tmp/cs_mem_stress 2>/dev/null");
+        system(cmd);
+        printf("✅ [Memory] 清理内存压力\n");
+        return 0;
+    }
+    
+    printf("🔥 [Memory Stress] 管理节点内存压力: 占用 %d MB\n", size_mb);
+    printf("   预期: 管理节点内存不足，可能导致OOM或服务降级\n");
+    
+    snprintf(cmd, sizeof(cmd),
+             "dd if=/dev/zero of=/tmp/cs_mem_stress bs=1M count=%d 2>/dev/null && "
+             "cat /tmp/cs_mem_stress > /dev/null &",
+             size_mb);
+    
+    return system(cmd);
+}
+
+// === 模块10：虚拟机操作故障模拟 (论文表3-3 虚拟机操作故障) ===
+int inject_vm_operation_fault(int op_type, const char *target) {
+    char cmd[512];
+    char nic[32];
+    
+    get_default_nic(nic, sizeof(nic));
+    
+    switch (op_type) {
+        case 1: // 模拟VM创建失败 (通过阻断存储访问)
+            printf("🚫 [VM Operation] 模拟虚拟机创建故障\n");
+            printf("   方法: 临时阻断存储访问，导致磁盘创建失败\n");
+            // 通过注入存储延迟来模拟
+            if (target) {
+                snprintf(cmd, sizeof(cmd),
+                         "tc qdisc add dev %s root netem delay 5000ms", nic);
+                system(cmd);
+            }
+            break;
+            
+        case 2: // 模拟VM迁移失败
+            printf("🚫 [VM Operation] 模拟虚拟机迁移故障\n");
+            printf("   方法: 注入网络延迟，导致迁移超时\n");
+            snprintf(cmd, sizeof(cmd),
+                     "tc qdisc add dev %s root netem delay 3000ms loss 30%%", nic);
+            system(cmd);
+            break;
+            
+        case 3: // 清理操作故障
+            snprintf(cmd, sizeof(cmd), "tc qdisc del dev %s root 2>/dev/null", nic);
+            system(cmd);
+            printf("✅ [VM Operation] 清理操作故障模拟\n");
+            break;
+            
+        default:
+            printf("❌ 未知的操作故障类型\n");
+            return -1;
+    }
+    
+    return 0;
+}
+
 // === 打印使用帮助 ===
 void print_cs_usage(const char *prog) {
-    printf("\n===========================================\n");
-    printf("   CloudStack故障注入工具 v1.0\n");
-    printf("===========================================\n\n");
+    printf("\n╔═══════════════════════════════════════════════════════════════════╗\n");
+    printf("║        CloudStack故障注入工具 v2.0 (增强版)                       ║\n");
+    printf("║   基于论文《云计算系统故障注入平台的研究与设计》                  ║\n");
+    printf("╚═══════════════════════════════════════════════════════════════════╝\n\n");
     printf("用法: %s <命令> [参数]\n\n", prog);
-    printf("命令:\n");
+    
+    printf("【进程故障注入】\n");
     printf("  list                        列出CloudStack服务状态\n");
     printf("  crash <组件>                终止指定组件进程\n");
     printf("  hang <组件>                 暂停指定组件进程\n");
-    printf("  resume <组件>               恢复指定组件进程\n");
+    printf("  resume <组件>               恢复指定组件进程\n\n");
+    
+    printf("【系统虚拟机故障】(论文4.1.3.2)\n");
+    printf("  sysvm-crash <类型>          强制关闭系统虚拟机\n");
+    printf("  sysvm-hang <类型>           挂起系统虚拟机\n");
+    printf("  sysvm-resume <类型>         恢复系统虚拟机\n");
+    printf("  类型: ssvm(二级存储), cpvm(控制台), vr(虚拟路由器)\n\n");
+    
+    printf("【网络故障注入】\n");
     printf("  api-delay <毫秒>            注入API响应延迟\n");
     printf("  api-delay-clear             清理API延迟\n");
     printf("  network <IP> [端口]         隔离指定IP的网络\n");
     printf("  network-clear <IP>          清理网络隔离\n");
-    printf("  db-limit                    限制数据库连接\n");
-    printf("  db-restore                  恢复数据库连接\n");
-    printf("  db-lock                     锁定关键表\n");
-    printf("  db-unlock                   解锁表\n");
-    printf("  storage-ro <挂载点>         设置存储只读\n");
-    printf("  storage-rw <挂载点>         恢复存储读写\n");
-    printf("  storage-fill <挂载点>       模拟存储满\n");
-    printf("  storage-clean <挂载点>      清理存储填充\n");
     printf("  agent-disconnect [IP]       断开Agent连接\n");
     printf("  agent-reconnect [IP]        恢复Agent连接\n\n");
-    printf("组件代号:\n");
-    printf("  ms      - Management Server\n");
-    printf("  agent   - CloudStack Agent\n");
-    printf("  usage   - Usage Server\n");
-    printf("  mysql   - MySQL数据库\n");
-    printf("  nfs     - NFS存储服务\n");
-    printf("  libvirt - Libvirt服务\n\n");
-    printf("示例:\n");
-    printf("  %s list                     # 查看服务状态\n", prog);
-    printf("  %s crash ms                 # 终止Management Server\n", prog);
-    printf("  %s api-delay 500            # 注入500ms API延迟\n", prog);
-    printf("  %s network 192.168.1.20     # 隔离计算节点\n", prog);
+    
+    printf("【存储故障注入】(论文4.1.3.1)\n");
+    printf("  storage-umount <挂载点>     卸载存储\n");
+    printf("  storage-ro <挂载点>         设置存储只读 (写失效)\n");
+    printf("  storage-rw <挂载点>         恢复存储读写\n");
+    printf("  storage-fill <挂载点>       模拟存储满\n");
+    printf("  storage-clean <挂载点>      清理存储填充\n\n");
+    
+    printf("【数据库故障注入】\n");
+    printf("  db-limit                    限制数据库连接数\n");
+    printf("  db-restore                  恢复数据库连接数\n");
+    printf("  db-lock                     锁定关键表\n");
+    printf("  db-unlock                   解锁表\n\n");
+    
+    printf("【资源占用故障】(论文4.1.3.4)\n");
+    printf("  cpu-stress <秒> [线程数]    CPU资源耗尽\n");
+    printf("  mem-stress <MB>             内存资源耗尽\n");
+    printf("  mem-stress-clear            清理内存占用\n\n");
+    
+    printf("【虚拟机操作故障】\n");
+    printf("  vm-create-fail              模拟VM创建失败\n");
+    printf("  vm-migrate-fail             模拟VM迁移失败\n");
+    printf("  vm-op-clear                 清理操作故障\n\n");
+    
+    printf("【组件代号】\n");
+    printf("  ms      - Management Server    agent   - CloudStack Agent\n");
+    printf("  usage   - Usage Server         mysql   - MySQL数据库\n");
+    printf("  nfs     - NFS存储服务          libvirt - Libvirt服务\n");
+    printf("  ssvm    - 二级存储虚拟机       cpvm    - 控制台代理虚拟机\n");
+    printf("  vr      - 虚拟路由器\n\n");
+    
+    printf("【示例】\n");
+    printf("  %s list                      # 查看服务状态\n", prog);
+    printf("  %s crash ms                  # 终止Management Server\n", prog);
+    printf("  %s sysvm-crash ssvm          # 关闭二级存储虚拟机\n", prog);
+    printf("  %s cpu-stress 30 4           # 30秒CPU压力(4线程)\n", prog);
+    printf("  %s storage-ro /mnt/secondary # 设置二级存储只读\n", prog);
     printf("\n");
 }
 
@@ -470,7 +748,18 @@ CloudStackComponent parse_cs_component(const char *arg) {
     if (strcmp(arg, "mysql") == 0) return CS_COMPONENT_MYSQL;
     if (strcmp(arg, "nfs") == 0) return CS_COMPONENT_NFS;
     if (strcmp(arg, "libvirt") == 0) return CS_COMPONENT_LIBVIRT;
+    if (strcmp(arg, "ssvm") == 0) return CS_COMPONENT_SSVM;
+    if (strcmp(arg, "cpvm") == 0) return CS_COMPONENT_CPVM;
+    if (strcmp(arg, "vr") == 0) return CS_COMPONENT_VR;
     return CS_COMPONENT_ALL;
+}
+
+// === 解析系统虚拟机类型 ===
+int parse_sysvm_type(const char *arg) {
+    if (strcmp(arg, "ssvm") == 0) return 1;  // Secondary Storage VM
+    if (strcmp(arg, "cpvm") == 0) return 2;  // Console Proxy VM
+    if (strcmp(arg, "vr") == 0) return 3;    // Virtual Router
+    return 0;
 }
 
 // === 主函数 ===
@@ -491,6 +780,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(command, "list") == 0) {
         list_cloudstack_processes();
     }
+    // === 进程故障 ===
     else if (strcmp(command, "crash") == 0) {
         if (argc < 3) {
             printf("❌ 用法: %s crash <组件>\n", argv[0]);
@@ -527,6 +817,44 @@ int main(int argc, char *argv[]) {
         }
         inject_cs_process_fault(comp, CS_FAULT_RESUME);
     }
+    // === 系统虚拟机故障 (论文4.1.3.2) ===
+    else if (strcmp(command, "sysvm-crash") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s sysvm-crash <ssvm|cpvm|vr>\n", argv[0]);
+            return 1;
+        }
+        int vm_type = parse_sysvm_type(argv[2]);
+        if (vm_type == 0) {
+            printf("❌ 无效的系统虚拟机类型: %s\n", argv[2]);
+            return 1;
+        }
+        inject_sysvm_fault(vm_type, CS_FAULT_CRASH);
+    }
+    else if (strcmp(command, "sysvm-hang") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s sysvm-hang <ssvm|cpvm|vr>\n", argv[0]);
+            return 1;
+        }
+        int vm_type = parse_sysvm_type(argv[2]);
+        if (vm_type == 0) {
+            printf("❌ 无效的系统虚拟机类型: %s\n", argv[2]);
+            return 1;
+        }
+        inject_sysvm_fault(vm_type, CS_FAULT_HANG);
+    }
+    else if (strcmp(command, "sysvm-resume") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s sysvm-resume <ssvm|cpvm|vr>\n", argv[0]);
+            return 1;
+        }
+        int vm_type = parse_sysvm_type(argv[2]);
+        if (vm_type == 0) {
+            printf("❌ 无效的系统虚拟机类型: %s\n", argv[2]);
+            return 1;
+        }
+        inject_sysvm_fault(vm_type, CS_FAULT_RESUME);
+    }
+    // === 网络故障 ===
     else if (strcmp(command, "api-delay") == 0) {
         if (argc < 3) {
             printf("❌ 用法: %s api-delay <毫秒>\n", argv[0]);
@@ -552,6 +880,7 @@ int main(int argc, char *argv[]) {
         }
         inject_cs_network_fault(argv[2], 0, 0);
     }
+    // === 数据库故障 ===
     else if (strcmp(command, "db-limit") == 0) {
         inject_db_fault(1, NULL);
     }
@@ -563,6 +892,14 @@ int main(int argc, char *argv[]) {
     }
     else if (strcmp(command, "db-unlock") == 0) {
         inject_db_fault(5, NULL);
+    }
+    // === 存储故障 (论文4.1.3.1) ===
+    else if (strcmp(command, "storage-umount") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s storage-umount <挂载点>\n", argv[0]);
+            return 1;
+        }
+        inject_storage_fault(1, argv[2]);
     }
     else if (strcmp(command, "storage-ro") == 0) {
         if (argc < 3) {
@@ -592,6 +929,7 @@ int main(int argc, char *argv[]) {
         }
         inject_storage_fault(5, argv[2]);
     }
+    // === Agent故障 ===
     else if (strcmp(command, "agent-disconnect") == 0) {
         const char *ip = (argc >= 3) ? argv[2] : NULL;
         inject_agent_fault(1, ip);
@@ -599,6 +937,36 @@ int main(int argc, char *argv[]) {
     else if (strcmp(command, "agent-reconnect") == 0) {
         const char *ip = (argc >= 3) ? argv[2] : NULL;
         inject_agent_fault(2, ip);
+    }
+    // === 资源占用故障 (论文4.1.3.4) ===
+    else if (strcmp(command, "cpu-stress") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s cpu-stress <秒> [线程数]\n", argv[0]);
+            return 1;
+        }
+        int duration = atoi(argv[2]);
+        int threads = (argc >= 4) ? atoi(argv[3]) : 0;
+        inject_cs_cpu_stress(duration, threads);
+    }
+    else if (strcmp(command, "mem-stress") == 0) {
+        if (argc < 3) {
+            printf("❌ 用法: %s mem-stress <MB>\n", argv[0]);
+            return 1;
+        }
+        inject_cs_memory_stress(atoi(argv[2]));
+    }
+    else if (strcmp(command, "mem-stress-clear") == 0) {
+        inject_cs_memory_stress(0);
+    }
+    // === 虚拟机操作故障 ===
+    else if (strcmp(command, "vm-create-fail") == 0) {
+        inject_vm_operation_fault(1, NULL);
+    }
+    else if (strcmp(command, "vm-migrate-fail") == 0) {
+        inject_vm_operation_fault(2, NULL);
+    }
+    else if (strcmp(command, "vm-op-clear") == 0) {
+        inject_vm_operation_fault(3, NULL);
     }
     else if (strcmp(command, "-h") == 0 || strcmp(command, "--help") == 0) {
         print_cs_usage(argv[0]);
