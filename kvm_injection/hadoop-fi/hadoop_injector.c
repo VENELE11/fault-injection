@@ -1,6 +1,5 @@
 /*
- * hadoop_injector.c - Hadoop集群故障注入工具 (增强版)
- * (柴森, 2016)
+ * hadoop_injector.c - Hadoop集群故障注入工具
  * 
  * 功能：针对Hadoop生态系统（HDFS/YARN/MapReduce）进行多层次故障注入
  * 支持：
@@ -65,7 +64,7 @@ typedef enum {
     HADOOP_FAULT_CORRUPT = 13        // 数据损坏模拟
 } HadoopFaultType;
 
-// === 组件类型枚举 (扩展版) ===
+// === 组件类型枚举 ===
 typedef enum {
     COMPONENT_ALL = 0,
     COMPONENT_NAMENODE = 1,
@@ -84,14 +83,14 @@ typedef enum {
 } HadoopComponent;
 
 // === 故障模型5元组 ===
-typedef struct {
+/*typedef struct {
     char layer[32];          // 故障层次 (Hadoop/Spark)
     char tool[32];           // 故障工具名
     char ip[32];             // 故障位置 (IP地址)
     char timestamp[32];      // 故障发生时间
     char params[128];        // 故障参数
 } FaultModel;
-
+*/
 // === 全局变量：资源压力控制 ===
 static volatile int g_stress_running = 0;
 static pthread_t *g_stress_threads = NULL;

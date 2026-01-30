@@ -1,6 +1,5 @@
 /*
  * cloudstack_injector.c - CloudStack云平台故障注入工具 (增强版)
- * (柴森, 2016)
  * 
  * 功能：针对CloudStack云计算平台进行多层次故障注入
  * 支持：
