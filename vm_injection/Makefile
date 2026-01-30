@@ -12,8 +12,8 @@ BASIC_TARGETS = cpu_injector mem_injector mem_leak network_injector process_inje
 # KVM层注入器 (新增)
 KVM_TARGETS = kvm_injector
 
-# 测试靶子
-TEST_TARGETS = target target_v2 target_cpu target_mem
+# 测试靶子 (综合 + 分类)
+TEST_TARGETS = target target_cpu target_mem target_reg target_net target_res
 
 # 所有目标
 ALL_TARGETS = $(BASIC_TARGETS) $(KVM_TARGETS) $(TEST_TARGETS)
@@ -71,16 +71,23 @@ kvm_injector: kvm_injector.c
 
 # 测试靶子规则
 target: target.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
 
-target_v2: targetv2.c
-	$(CC) $(CFLAGS) -o $@ $<
+target_cpu: target_cpu.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
 
-target_cpu: targetv3.c
-	$(CC) $(CFLAGS) -o $@ $<
+target_mem: target_mem.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
 
-target_mem: targetv4.c
-	$(CC) $(CFLAGS) -o $@ $<
+# target_reg 必须用 -O0 禁止优化，否则寄存器注入效果不明显
+target_reg: target_reg.c
+	$(CC) -Wall -O0 -o $@ $< $(LDFLAGS_PTHREAD)
+
+target_net: target_net.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
+
+target_res: target_res.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_PTHREAD)
 
 # 清理
 clean:
@@ -89,21 +96,22 @@ clean:
 
 # 帮助
 help:
-	@echo "虚拟机注入工具集 Makefile v2.0 (增强版)"
-	@echo ""
+	@echo "虚拟机注入工具集 Makefile v3.0"
 	@echo ""
 	@echo "用法: make [target]"
 	@echo ""
 	@echo "Targets:"
 	@echo "  all     - 编译所有工具 (默认)"
 	@echo "  basic   - 仅编译基础注入器"
-	@echo "  kvm     - 编译KVM层注入器 (软错误/性能故障/CPU热插拔)"
+	@echo "  kvm     - 编译KVM层注入器"
 	@echo "  test    - 仅编译测试靶子"
 	@echo "  clean   - 清理所有编译产物"
 	@echo "  help    - 显示此帮助信息"
 	@echo ""
-	@echo "KVM注入器功能:"
-	@echo "  - 软错误注入 (4.1.2.1): 位翻转/交换/覆盖"
-	@echo "  - 客户OS错误行为 (4.1.2.2): 数据段修改/异常触发"
-	@echo "  - 性能故障 (4.1.2.3): ioctl延迟模拟"
-	@echo "  - 维护故障 (4.1.2.4): CPU热插拔"
+	@echo "测试靶场:"
+	@echo "  target_cpu - CPU注入测试 (配合 cpu_injector)"
+	@echo "  target_mem - 内存注入测试 (配合 mem_injector)"
+	@echo "  target_reg - 寄存器注入测试 (配合 reg_injector)"
+	@echo "  target_net - 网络注入测试 (配合 network_injector)"
+	@echo "  target_res - 资源耗尽测试 (配合 mem_leak)"
+	@echo "  target     - 综合测试靶场"

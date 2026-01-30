@@ -139,6 +139,7 @@ unsigned long find_region_address_blind(pid_t pid, TargetRegion region)
 }
 
 // [新功能] 扫描内存寻找特征值
+// 改进版：扫描所有可读写的内存区域（包括匿名 mmap）
 unsigned long scan_memory_for_pattern(pid_t pid, TargetRegion region, unsigned long signature)
 {
     char map_path[64];
@@ -151,56 +152,68 @@ unsigned long scan_memory_for_pattern(pid_t pid, TargetRegion region, unsigned l
     unsigned long start, end;
     char perms[5];
     char path[128];
-    int region_found = 0;
 
-    // 1. 先定位到合法的扫描范围
+    printf("[扫描器] 搜索特征值: 0x%lx\n", signature);
+    printf("[扫描器] 扫描所有可读写内存区域...\n");
+
+    // 遍历所有内存区域
     while (fgets(line, sizeof(line), fp))
     {
         memset(path, 0, sizeof(path));
-        sscanf(line, "%lx-%lx %s %*s %*s %*s %s", &start, &end, perms, path);
+        int fields = sscanf(line, "%lx-%lx %4s %*s %*s %*s %127s", &start, &end, perms, path);
 
-        if (region == REGION_HEAP && strstr(line, "[heap]"))
+        // 检查是否可读写 (rw)
+        if (perms[0] != 'r' || perms[1] != 'w')
+            continue;
+
+        // 根据区域类型过滤
+        int should_scan = 0;
+        if (region == REGION_HEAP)
         {
-            region_found = 1;
-            break;
+            // 扫描: [heap] 或 匿名内存 (无路径名) 或 [anon:*]
+            if (strstr(line, "[heap]") ||
+                (fields < 4) || // 无路径名 = 匿名内存
+                (path[0] == '\0') ||
+                strstr(line, "[anon"))
+            {
+                should_scan = 1;
+            }
         }
-        else if (region == REGION_STACK && strstr(line, "[stack]"))
+        else if (region == REGION_STACK)
         {
-            region_found = 1;
-            break;
+            if (strstr(line, "[stack]"))
+            {
+                should_scan = 1;
+            }
         }
-        // 注意：代码段通常只读，不建议扫描修改，除非你想改指令
+
+        if (!should_scan)
+            continue;
+
+        printf("[扫描] 区域: 0x%lx - 0x%lx (%s)\n", start, end,
+               path[0] ? path : "anonymous");
+
+        // 扫描这个区域
+        for (unsigned long curr = start; curr < end; curr += 8)
+        {
+            errno = 0;
+            long data = ptrace(PTRACE_PEEKDATA, pid, (void *)curr, NULL);
+            if (errno != 0)
+                continue;
+
+            if ((unsigned long)data == signature)
+            {
+                printf("[+] 命中目标! 地址: 0x%lx (值: 0x%lx)\n", curr, (unsigned long)data);
+                fclose(fp);
+                return curr;
+            }
+        }
     }
     fclose(fp);
 
-    if (!region_found)
-    {
-        fprintf(stderr, "[-] 未找到指定的扫描区域 (Heap/Stack)。\n");
-        exit(1);
-    }
-
-    printf("[扫描器] 正在 %s 区域 (0x%lx - 0x%lx) 搜索特征值: 0x%lx ...\n",
-           (region == REGION_HEAP) ? "Heap" : "Stack", start, end, signature);
-
-    // 2. 暴力扫描：步长为 8 字节 (64位系统)
-    // 为了防止扫描时间过长，对于 Stack 可以只扫顶部的一部分，这里演示全扫
-    for (unsigned long curr = start; curr < end; curr += 8)
-    {
-        // 注意：ptrace_read 这里可能会失败（比如读到了不可读的页），我们简单处理：跳过
-        errno = 0;
-        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)curr, NULL);
-        if (errno != 0)
-            continue;
-
-        if ((unsigned long)data == signature)
-        {
-            printf("[+]  命中目标！地址: 0x%lx (值: 0x%lx)\n", curr, data);
-            return curr;
-        }
-    }
-
-    fprintf(stderr, "[-] 扫描结束，在该区域未找到特征值 0x%lx\n", signature);
-    // 没找到则退出，因为后续无法注入
+    fprintf(stderr, "[-] 扫描结束，未找到特征值 0x%lx\n", signature);
+    fprintf(stderr, "    提示: 确认目标进程中确实存在该特征值\n");
+    // 没找到则退出
     ptrace_detach(pid);
     exit(1);
 }

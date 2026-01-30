@@ -50,11 +50,19 @@ typedef enum
 
 // 全局变量 (用于信号处理)
 pid_t global_target_pid = -1;
+volatile int keep_running = 1;
 
 void die(const char *msg)
 {
     perror(msg);
     exit(1);
+}
+
+// Ctrl+C 处理
+void sigint_handler(int sig)
+{
+    keep_running = 0;
+    printf("\n[!] 收到停止信号，正在退出...\n");
 }
 
 // 辅助函数
@@ -146,20 +154,31 @@ uint64_t apply_fault(uint64_t original, FaultType type, int user_specified_bit)
 
 int main(int argc, char *argv[])
 {
-    // 参数解析：支持 -w 选项
+    // 参数解析：支持 -w 和 -l 选项
     if (argc < 4)
     {
-        printf("用法: %s <PID> <Register> <Type> [Bit] [-w <microseconds>]\n", argv[0]);
+        printf("用法: %s <PID> <Register> <Type> [Bit] [-w <usec>] [-l <loop_count>]\n", argv[0]);
+        printf("选项:\n");
+        printf("  -w <usec>       延时触发 (微秒)\n");
+        printf("  -l <count>      循环注入次数 (0=无限, Ctrl+C停止)\n");
+        printf("  -i <interval>   循环间隔 (毫秒, 默认50)\n");
+        printf("示例:\n");
+        printf("  %s 1234 X0 flip1 -1         # 单次注入\n", argv[0]);
+        printf("  %s 1234 X0 flip1 -1 -l 100  # 循环100次\n", argv[0]);
+        printf("  %s 1234 X0 add1 -1 -l 0     # 无限循环直到Ctrl+C\n", argv[0]);
         return 1;
     }
 
     srand(time(NULL));
+    signal(SIGINT, sigint_handler);
 
     pid_t pid = atoi(argv[1]);
     char *reg_name = argv[2];
     char *type_str = argv[3];
     int bit = -1;
     int wait_usec = 0;
+    int loop_count = 1;     // 默认单次
+    int loop_interval = 50; // 默认50ms间隔
 
     // 解析可选参数
     for (int i = 4; i < argc; i++)
@@ -167,6 +186,16 @@ int main(int argc, char *argv[])
         if (strcmp(argv[i], "-w") == 0 && i + 1 < argc)
         {
             wait_usec = atoi(argv[i + 1]);
+            i++;
+        }
+        else if (strcmp(argv[i], "-l") == 0 && i + 1 < argc)
+        {
+            loop_count = atoi(argv[i + 1]);
+            i++;
+        }
+        else if (strcmp(argv[i], "-i") == 0 && i + 1 < argc)
+        {
+            loop_interval = atoi(argv[i + 1]);
             i++;
         }
         else if (bit == -1)
@@ -206,81 +235,134 @@ int main(int argc, char *argv[])
 
     printf("=== ARM64 寄存器注入器 (PID: %d) ===\n", pid);
 
-    // 1. 初次 Attach
-    ptrace_attach(pid);
-    global_target_pid = pid;
+    // 判断是循环模式还是单次模式
+    int is_loop_mode = (loop_count != 1);
+    int infinite_loop = (loop_count == 0);
 
-    // 2. 处理延时逻辑 (如果有 -w 参数)
-    if (wait_usec > 0)
+    if (is_loop_mode)
     {
-        printf(" 延时模式: 目标将继续运行 %.2f 秒...\n", wait_usec / 1000000.0);
-
-        signal(SIGALRM, alarm_handler);
-        ualarm(wait_usec, 0); // 设置微秒定时器
-
-        // 放行
-        if (ptrace(PTRACE_CONT, pid, NULL, NULL) < 0)
-            die("PTRACE_CONT failed");
-
-        // 等待被信号中断 (当 alarm_handler 发送 SIGSTOP 时，这里会返回)
-        int status;
-        waitpid(pid, &status, 0);
-
-        if (WIFSTOPPED(status))
-        {
-            printf(" 时间触发: 捕获目标，准备注入...\n");
-        }
+        if (infinite_loop)
+            printf(" 循环模式: 无限循环 (Ctrl+C停止), 间隔 %d ms\n", loop_interval);
         else
-        {
-            printf(" 警告: 目标在等待期间异常退出。\n");
-            return 1;
-        }
+            printf(" 循环模式: %d 次, 间隔 %d ms\n", loop_count, loop_interval);
     }
     else
     {
         printf(" 立即模式: 直接注入...\n");
     }
 
-    // 3. 获取寄存器
-    struct user_pt_regs regs;
-    struct iovec iov;
-    iov.iov_base = &regs;
-    iov.iov_len = sizeof(regs);
-    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) < 0)
-        die("GETREGSET failed");
+    int injection_count = 0;
 
-    // 4. 定位寄存器指针
-    uint64_t *target_ptr = NULL;
-    if (strcasecmp(reg_name, "PC") == 0)
-        target_ptr = &regs.pc;
-    else if (strcasecmp(reg_name, "SP") == 0)
-        target_ptr = &regs.sp;
-    else if (reg_name[0] == 'X' || reg_name[0] == 'x')
+    // ========== 循环注入 ==========
+    while (keep_running && (infinite_loop || injection_count < loop_count))
     {
-        int idx = atoi(reg_name + 1);
-        if (idx >= 0 && idx <= 30)
-            target_ptr = &regs.regs[idx];
+        // 1. Attach
+        if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+        {
+            if (errno == ESRCH)
+            {
+                printf("[!] 目标进程已退出\n");
+                break;
+            }
+            perror("Attach failed");
+            usleep(loop_interval * 1000);
+            continue;
+        }
+        waitpid(pid, NULL, 0);
+
+        // 2. 处理延时逻辑 (如果有 -w 参数)
+        if (wait_usec > 0 && injection_count == 0)
+        {
+            printf(" 延时模式: 目标将继续运行 %.2f 秒...\n", wait_usec / 1000000.0);
+
+            signal(SIGALRM, alarm_handler);
+            global_target_pid = pid;
+            ualarm(wait_usec, 0);
+
+            if (ptrace(PTRACE_CONT, pid, NULL, NULL) < 0)
+            {
+                perror("PTRACE_CONT failed");
+                ptrace(PTRACE_DETACH, pid, NULL, NULL);
+                break;
+            }
+
+            int status;
+            waitpid(pid, &status, 0);
+
+            if (!WIFSTOPPED(status))
+            {
+                printf(" 警告: 目标在等待期间异常退出。\n");
+                break;
+            }
+        }
+
+        // 3. 获取寄存器
+        struct user_pt_regs regs;
+        struct iovec iov;
+        iov.iov_base = &regs;
+        iov.iov_len = sizeof(regs);
+        if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) < 0)
+        {
+            perror("GETREGSET failed");
+            ptrace(PTRACE_DETACH, pid, NULL, NULL);
+            usleep(loop_interval * 1000);
+            continue;
+        }
+
+        // 4. 定位寄存器指针
+        uint64_t *target_ptr = NULL;
+        if (strcasecmp(reg_name, "PC") == 0)
+            target_ptr = &regs.pc;
+        else if (strcasecmp(reg_name, "SP") == 0)
+            target_ptr = &regs.sp;
+        else if (reg_name[0] == 'X' || reg_name[0] == 'x')
+        {
+            int idx = atoi(reg_name + 1);
+            if (idx >= 0 && idx <= 30)
+                target_ptr = &regs.regs[idx];
+        }
+
+        if (!target_ptr)
+        {
+            printf(" 无效寄存器\n");
+            ptrace(PTRACE_DETACH, pid, NULL, NULL);
+            return 1;
+        }
+
+        // 5. 应用故障
+        uint64_t old_val = *target_ptr;
+        uint64_t new_val = apply_fault(old_val, type, bit);
+        *target_ptr = new_val;
+
+        injection_count++;
+
+        if (is_loop_mode)
+        {
+            // 循环模式：每100次输出一次
+            if (injection_count % 100 == 0)
+            {
+                printf("[#%d] %s: 0x%lx -> 0x%lx\n", injection_count, reg_name, old_val, new_val);
+            }
+        }
+        else
+        {
+            printf("[注入] %s: 0x%lx -> 0x%lx\n", reg_name, old_val, new_val);
+        }
+
+        // 6. 写回并恢复
+        if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) < 0)
+        {
+            perror("SETREGSET failed");
+        }
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+
+        // 循环模式下等待间隔
+        if (is_loop_mode && keep_running && (infinite_loop || injection_count < loop_count))
+        {
+            usleep(loop_interval * 1000);
+        }
     }
 
-    if (!target_ptr)
-    {
-        printf(" 无效寄存器\n");
-        ptrace_detach(pid);
-        return 1;
-    }
-
-    // 5. 应用故障
-    uint64_t old_val = *target_ptr;
-    uint64_t new_val = apply_fault(old_val, type, bit);
-    *target_ptr = new_val;
-
-    printf("[注入] %s: 0x%lx -> 0x%lx\n", reg_name, old_val, new_val);
-
-    // 6. 写回并恢复
-    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) < 0)
-        die("SETREGSET failed");
-    ptrace_detach(pid);
-    printf(" 完成\n");
-
+    printf(" 完成，共注入 %d 次\n", injection_count);
     return 0;
 }
