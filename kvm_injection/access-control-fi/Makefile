@@ -1,14 +1,14 @@
-# 1. 编译当前目录的 access-fi.c (内核模块) 和 access-fi-main.c (工具)
-obj-m := access-fi.o
+# 修复后的 Makefile，对应 resource.c 和 resource-main.c
+obj-m := resource.o
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 
-# 2. 递归编译子目录 memory-load
+# 递归编译子目录
 DIRS = memory-load
 
 all:
     $(MAKE) -C $(KDIR) M=$(PWD) modules
-    gcc -o access-load access-fi-main.c
+    gcc -o access-load resource-main.c
     for i in $(DIRS); do \
         (cd $$i && echo "make $$i" && $(MAKE)) || exit 1; \
     done

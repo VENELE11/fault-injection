@@ -209,53 +209,90 @@ int inject_guest_behavior_fault(int pid, int behavior_type) {
 
 // === 模块3：性能故障注入 ===
 // 通过cgroups限制CPU来间接实现延迟效果
-int inject_performance_fault(int pid, int delay_ms) {
+int inject_performance_fault(int pid, int delay_ms)
+{
     char cmd[512];
-    
+
     printf("  [性能故障注入]\n");
     printf("   目标PID: %d, 延迟: %dms\n", pid, delay_ms);
-    
-    if (delay_ms <= 0) {
+
+    if (delay_ms <= 0)
+    {
         // 清理：移除CPU限制
-        snprintf(cmd, sizeof(cmd),
-                 "echo %d > /sys/fs/cgroup/cpu/tasks 2>/dev/null", pid);
+        // 尝试 v1 恢复 (移回 tasks)
+        snprintf(cmd, sizeof(cmd), "echo %d > /sys/fs/cgroup/cpu/tasks 2>/dev/null", pid);
         system(cmd);
-        printf(" 已清理性能限制\n");
+        // 尝试 v2 恢复 (移回 cgroup.procs)
+        snprintf(cmd, sizeof(cmd), "echo %d > /sys/fs/cgroup/cgroup.procs 2>/dev/null", pid);
+        system(cmd);
+
+        printf(" 已尝试清理性能限制\n");
         return 0;
     }
-    
-    // 方法1：通过cgroups限制CPU配额
-    // 创建cgroup
-    system("mkdir -p /sys/fs/cgroup/cpu/qemu_throttle 2>/dev/null");
-    
+
     // 计算CPU配额 (延迟越大，配额越少)
     // 默认周期为100ms，配额设为实际执行时间
-    int quota = 100000 - (delay_ms * 1000);  // 微秒
-    if (quota < 10000) quota = 10000;  // 最少10%
-    
-    snprintf(cmd, sizeof(cmd),
-             "echo 100000 > /sys/fs/cgroup/cpu/qemu_throttle/cpu.cfs_period_us 2>/dev/null && "
-             "echo %d > /sys/fs/cgroup/cpu/qemu_throttle/cpu.cfs_quota_us 2>/dev/null && "
-             "echo %d > /sys/fs/cgroup/cpu/qemu_throttle/tasks 2>/dev/null",
-             quota, pid);
-    
-    int ret = system(cmd);
-    
-    if (ret == 0) {
-        printf("   通过cgroups注入CPU限制 (配额: %d%%)\n", quota / 1000);
-        printf("   效果: qemu-kvm执行速度下降，模拟ioctl延迟\n");
-    } else {
+    int quota = 100000 - (delay_ms * 1000); // 微秒
+    if (quota < 10000)
+        quota = 10000; // 最少10%
+
+    int ret = -1;
+
+    // --- 尝试 Cgroups v1 ---
+    // 检查是否存在v1的cpu控制器路径
+    if (access("/sys/fs/cgroup/cpu", F_OK) == 0)
+    {
+        system("mkdir -p /sys/fs/cgroup/cpu/qemu_throttle 2>/dev/null");
+        snprintf(cmd, sizeof(cmd),
+                 "echo 100000 > /sys/fs/cgroup/cpu/qemu_throttle/cpu.cfs_period_us 2>/dev/null && "
+                 "echo %d > /sys/fs/cgroup/cpu/qemu_throttle/cpu.cfs_quota_us 2>/dev/null && "
+                 "echo %d > /sys/fs/cgroup/cpu/qemu_throttle/tasks 2>/dev/null",
+                 quota, pid);
+        ret = system(cmd);
+        if (ret == 0)
+        {
+            printf("   [Cgroups v1] 注入CPU限制 (配额: %d%%)\n", quota / 1000);
+            printf("   效果: qemu-kvm执行速度下降，模拟ioctl延迟\n");
+        }
+    }
+
+    // --- 尝试 Cgroups v2 ---
+    // 如果v1失败，且存在v2特征文件
+    if (ret != 0 && access("/sys/fs/cgroup/cgroup.controllers", F_OK) == 0)
+    {
+        system("mkdir -p /sys/fs/cgroup/qemu_throttle 2>/dev/null");
+
+        // 确保父层级开启了cpu控制器(部分系统需要显式开启)
+        system("echo '+cpu' > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null");
+
+        // v2 使用 cpu.max: "QUOTA PERIOD"
+        snprintf(cmd, sizeof(cmd),
+                 "echo '%d 100000' > /sys/fs/cgroup/qemu_throttle/cpu.max 2>/dev/null && "
+                 "echo %d > /sys/fs/cgroup/qemu_throttle/cgroup.procs 2>/dev/null",
+                 quota, pid);
+        ret = system(cmd);
+        if (ret == 0)
+        {
+            printf("   [Cgroups v2] 注入CPU限制 (配额: %d%%)\n", quota / 1000);
+            printf("   效果: qemu-kvm执行速度下降，模拟ioctl延迟\n");
+        }
+    }
+
+    // --- 备选方案：cpulimit ---
+    if (ret != 0)
+    {
         // 方法2：使用cpulimit工具
         printf("   cgroups方法失败，尝试cpulimit...\n");
         int cpu_percent = 100 - (delay_ms / 10);
-        if (cpu_percent < 10) cpu_percent = 10;
-        
+        if (cpu_percent < 10)
+            cpu_percent = 10;
+
         snprintf(cmd, sizeof(cmd),
                  "cpulimit -p %d -l %d -b 2>/dev/null &", pid, cpu_percent);
         system(cmd);
         printf("   通过cpulimit限制CPU使用率为 %d%%\n", cpu_percent);
     }
-    
+
     return 0;
 }
 // === 模块：CPU 高负载注入 (基于资源争抢) ===
@@ -342,8 +379,9 @@ void clear_all_faults() {
     printf("\n [清理所有KVM故障]\n");
     
     // 清理cgroups限制
-    system("rmdir /sys/fs/cgroup/cpu/qemu_throttle 2>/dev/null");
-    
+    system("rmdir /sys/fs/cgroup/cpu/qemu_throttle 2>/dev/null"); // v1
+    system("rmdir /sys/fs/cgroup/qemu_throttle 2>/dev/null");     // v2
+
     // 恢复所有CPU
     int total_cpus = sysconf(_SC_NPROCESSORS_CONF);
     for (int i = 1; i < total_cpus; i++) {
