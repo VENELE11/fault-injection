@@ -1,0 +1,56 @@
+{
+  "ssh": {
+    "user": "root",
+    "identity_file": "",
+    "connect_timeout": 5
+  },
+  "nodes": [
+    {
+      "name": "master",
+      "host": "192.168.1.10",
+      "port": 22,
+      "role": "master",
+      "local": false
+    },
+    {
+      "name": "slave1",
+      "host": "192.168.1.11",
+      "port": 22,
+      "role": "slave",
+      "local": false
+    },
+    {
+      "name": "slave2",
+      "host": "192.168.1.12",
+      "port": 22,
+      "role": "slave",
+      "local": false
+    }
+  ],
+  "hadoop": {
+    "home": "/opt/hadoop",
+    "injector": "/home/venele/grad_project/kvm_injection/hadoop-fi/hadoop_injector",
+    "use_sudo": false
+  },
+  "vm": {
+    "base_dir": "/home/venele/grad_project/vm_injection",
+    "process_injector": "/home/venele/grad_project/vm_injection/process_injector",
+    "network_injector": "/home/venele/grad_project/vm_injection/network_injector",
+    "cpu_injector": "/home/venele/grad_project/vm_injection/cpu_injector",
+    "mem_leak": "/home/venele/grad_project/vm_injection/mem_leak",
+    "mem_injector": "/home/venele/grad_project/vm_injection/mem_injector",
+    "reg_injector": "/home/venele/grad_project/vm_injection/reg_injector",
+    "use_sudo": false
+  },
+  "kvm": {
+    "injector": "/home/venele/grad_project/vm_injection/kvm_injector",
+    "use_sudo": false
+  },
+  "controller": {
+    "command_timeout": 20
+  },
+  "output": {
+    "max_lines": 200,
+    "max_chars": 8000
+  }
+}

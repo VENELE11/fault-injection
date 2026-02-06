@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>故障注入控制器</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-left">
+        <div class="badge">Fault Injection Platform</div>
+        <h1>故障注入控制器</h1>
+        <p class="hero-sub">面向 Hadoop 集群的统一控制与故障注入平台（中文界面）。</p>
+      </div>
+      <div class="hero-right">
+        <div class="pill" id="health">连接中...</div>
+        <button class="ghost" id="refreshConfig">刷新配置</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>集群概览</h2>
+          <p>当前控制器与节点连接信息（master 可免密 SSH 到 slave）。</p>
+        </div>
+        <div class="panel-meta" id="outputLimit">输出限制: --</div>
+      </div>
+      <div class="nodes" id="nodes"></div>
+    </section>
+
+    <section class="panel" id="actionsPanel">
+      <div class="panel-head">
+        <div>
+          <h2>功能面板</h2>
+          <p>已集成全部 Hadoop 注入功能，按模块分类展示。</p>
+        </div>
+      </div>
+      <div id="actionsContainer" class="action-sections"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>运行历史</h2>
+          <p>后端输出已限制长度，保证页面流畅。</p>
+        </div>
+        <div class="panel-actions">
+          <button class="ghost" id="clearHistory">清空记录</button>
+        </div>
+      </div>
+      <div class="history" id="history"></div>
+    </section>
+  </div>
+
+  <datalist id="nodeList"></datalist>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
