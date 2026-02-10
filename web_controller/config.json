@@ -1,35 +1,35 @@
 {
   "ssh": {
     "user": "root",
-    "identity_file": "",
+    "identity_file": "/home/venele/.ssh/fi_vm",
     "connect_timeout": 5
   },
   "nodes": [
     {
       "name": "master",
-      "host": "192.168.1.10",
-      "port": 22,
+      "host": "127.0.0.1",
+      "port": 2220,
       "role": "master",
       "local": false
     },
     {
       "name": "slave1",
-      "host": "192.168.1.11",
-      "port": 22,
+      "host": "127.0.0.1",
+      "port": 2221,
       "role": "slave",
       "local": false
     },
     {
       "name": "slave2",
-      "host": "192.168.1.12",
-      "port": 22,
+      "host": "127.0.0.1",
+      "port": 2222,
       "role": "slave",
       "local": false
     }
   ],
   "hadoop": {
     "home": "/opt/hadoop",
-    "injector": "/home/venele/grad_project/kvm_injection/hadoop-fi/hadoop_injector",
+    "injector": "/home/hadoop-fi/hadoop_injector",
     "use_sudo": false
   },
   "vm": {
@@ -40,17 +40,126 @@
     "mem_leak": "/home/venele/grad_project/vm_injection/mem_leak",
     "mem_injector": "/home/venele/grad_project/vm_injection/mem_injector",
     "reg_injector": "/home/venele/grad_project/vm_injection/reg_injector",
-    "use_sudo": false
+    "use_sudo": true
   },
   "kvm": {
+    "base_dir": "/home/venele/grad_project/kvm_injection",
     "injector": "/home/venele/grad_project/vm_injection/kvm_injector",
-    "use_sudo": false
+    "use_sudo": true
   },
   "controller": {
     "command_timeout": 20
   },
   "output": {
-    "max_lines": 200,
-    "max_chars": 8000
+    "max_lines": 0,
+    "max_chars": 0
+  },
+  "tests": {
+    "enabled": false,
+    "skip_defaults": [
+      "inject_list",
+      "delay_show",
+      "delay_clear",
+      "loss_clear",
+      "reorder_clear",
+      "isolate_clear",
+      "mem_stress_clear",
+      "disk_fill_clear",
+      "hadoop_stop"
+    ],
+    "defaults": {
+      "hadoop": [
+        {
+          "title": "Hadoop 进程 (jps)",
+          "scope": "all",
+          "timeout": 5,
+          "cmd": "jps"
+        },
+        {
+          "title": "HDFS 根目录 (ls)",
+          "scope": "master",
+          "timeout": 6,
+          "cmd": ". /etc/profile >/dev/null 2>&1; {hadoop_home}/bin/hdfs dfs -ls / | head -n 5"
+        },
+        {
+          "title": "YARN 节点 (node -list)",
+          "scope": "master",
+          "timeout": 6,
+          "cmd": ". /etc/profile >/dev/null 2>&1; {hadoop_home}/bin/yarn node -list | head -n 5"
+        }
+      ],
+      "vm": [],
+      "kvm": [
+        {
+          "title": "KVM 设备检查",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "ls -l /dev/kvm 2>/dev/null || echo '/dev/kvm missing'"
+        },
+        {
+          "title": "KVM 模块",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "lsmod | grep -E '^kvm' || echo 'kvm module not loaded'"
+        },
+        {
+          "title": "QEMU 进程",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep -v grep | head -n 5 || echo 'qemu not running'"
+        }
+      ]
+    },
+    "after": {
+      "vm_process": [
+        {
+          "title": "进程匹配检查",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "pgrep -af \"{process}\" | head -n 3 || true"
+        }
+      ],
+      "vm_cpu": [
+        {
+          "title": "CPU 前 5 进程",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | head -n 5"
+        }
+      ],
+      "vm_mem_inject": [
+        {
+          "title": "目标进程状态",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "ps -o pid,comm -p {pid} || true"
+        }
+      ],
+      "vm_reg_inject": [
+        {
+          "title": "目标进程状态",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "ps -o pid,comm -p {pid} || true"
+        }
+      ],
+      "vm_network": [
+        {
+          "title": "网络连通性 (ping 8.8.8.8)",
+          "scope": "local",
+          "timeout": 6,
+          "cmd": "ping -c 2 -W 1 8.8.8.8"
+        }
+      ],
+      "vm_mem_leak": [
+        {
+          "title": "内存概览",
+          "scope": "local",
+          "timeout": 5,
+          "cmd": "cat /proc/meminfo | head -n 5"
+        }
+      ]
+    },
+    "after_group": {}
   }
 }

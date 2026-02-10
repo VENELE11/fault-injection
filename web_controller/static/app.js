@@ -6,11 +6,50 @@ const nodeListEl = document.getElementById("nodeList");
 const refreshBtn = document.getElementById("refreshConfig");
 const clearBtn = document.getElementById("clearHistory");
 const outputLimitEl = document.getElementById("outputLimit");
+const kvmTestToggle = document.getElementById("kvmTestToggle");
+const recoverAllBtn = document.getElementById("recoverAll");
 
 let configCache = null;
+let actionTitleMap = {};
 
 function appendHistory(item) {
   historyEl.prepend(item);
+}
+
+function buildResult(res) {
+  const result = document.createElement("div");
+  result.className = "result";
+  result.innerHTML = `
+      <div class="result-head">
+        <span class="result-node">${res.node}@${res.host}</span>
+        <span class="result-meta">exit=${res.exit_code} | ${res.elapsed}s</span>
+      </div>
+      <div class="result-cmd">${res.cmd || ""}</div>
+    `;
+
+  const output = document.createElement("pre");
+  output.className = "result-output";
+  const outText = [res.stdout, res.stderr].filter(Boolean).join("\n");
+  output.textContent = outText || "(无输出)";
+  result.appendChild(output);
+
+  if (res.truncated) {
+    const badge = document.createElement("div");
+    badge.className = "result-trunc";
+    const meta = res.stdout_meta || {};
+    const lines = meta.total_lines || "?";
+    const chars = meta.total_chars || "?";
+    badge.textContent = `输出已截断 (总计 ${lines} 行 / ${chars} 字符)`;
+    result.appendChild(badge);
+  }
+
+  return result;
+}
+
+function appendResults(container, results = []) {
+  results.forEach((r) => {
+    container.appendChild(buildResult(r));
+  });
 }
 
 function renderNodes(nodes) {
@@ -42,6 +81,10 @@ function renderNodes(nodes) {
 
 function renderActionSections(groups, actions) {
   actionsContainer.innerHTML = "";
+  actionTitleMap = actions.reduce((acc, action) => {
+    acc[action.key] = action.title || action.key;
+    return acc;
+  }, {});
   const actionMap = actions.reduce((acc, action) => {
     if (!acc[action.group]) acc[action.group] = [];
     acc[action.group].push(action);
@@ -94,6 +137,17 @@ function renderActionCard(action) {
     runAction(action.key, action.title, params, btn);
   });
 
+  const quickSpec = getQuickActionSpec(action.key);
+  let quickBtn = null;
+  if (quickSpec) {
+    quickBtn = document.createElement("button");
+    quickBtn.textContent = quickSpec.label;
+    quickBtn.addEventListener("click", () => {
+      const quickTitle = actionTitleMap[quickSpec.action] || quickSpec.title || quickSpec.label;
+      runAction(quickSpec.action, quickTitle, quickSpec.params || {}, quickBtn);
+    });
+  }
+
   const dangerBadge = action.danger ? '<span class="danger-badge">高风险</span>' : "";
   card.innerHTML = `
     <div class="action-title">${action.title}${dangerBadge}</div>
@@ -103,6 +157,7 @@ function renderActionCard(action) {
 
   const footer = document.createElement("div");
   footer.className = "action-footer";
+  if (quickBtn) footer.appendChild(quickBtn);
   footer.appendChild(btn);
   card.appendChild(footer);
 
@@ -206,6 +261,19 @@ function bindVmNetworkHints(form) {
   updateHint();
 }
 
+function getQuickActionSpec(actionKey) {
+  const map = {
+    delay: { action: "delay_clear", label: "清理" },
+    loss: { action: "loss_clear", label: "清理" },
+    reorder: { action: "reorder_clear", label: "清理" },
+    isolate: { action: "isolate_clear", label: "清理" },
+    mem_stress: { action: "mem_stress_clear", label: "清理" },
+    disk_fill: { action: "disk_fill_clear", label: "清理" },
+    vm_network: { action: "vm_network", label: "清理", params: { net_type: "clear" } },
+  };
+  return map[actionKey] || null;
+}
+
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
   if (!res.ok) {
@@ -217,15 +285,20 @@ async function fetchJson(url, options = {}) {
 
 async function runAction(actionKey, title, params, btn) {
   const startedAt = new Date();
-  const btnText = btn.textContent;
-  btn.textContent = "执行中...";
-  btn.disabled = true;
+  const btnText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.textContent = "执行中...";
+    btn.disabled = true;
+  }
 
   try {
+    const testFlags = {
+      kvm: Boolean(kvmTestToggle && kvmTestToggle.checked),
+    };
     const data = await fetchJson("/api/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: actionKey, params }),
+      body: JSON.stringify({ action: actionKey, params, tests: testFlags }),
     });
 
     const entry = buildHistoryEntry(title, actionKey, data, startedAt);
@@ -234,9 +307,54 @@ async function runAction(actionKey, title, params, btn) {
     const entry = buildErrorEntry(title, actionKey, err, startedAt);
     appendHistory(entry);
   } finally {
-    btn.textContent = btnText;
-    btn.disabled = false;
+    if (btn) {
+      btn.textContent = btnText;
+      btn.disabled = false;
+    }
   }
+}
+
+async function runRecoveryAll() {
+  if (!recoverAllBtn) return;
+  const plan = [
+    { action: "delay_clear" },
+    { action: "loss_clear" },
+    { action: "reorder_clear" },
+    { action: "isolate_clear" },
+    { action: "mem_stress_clear" },
+    { action: "disk_fill_clear" },
+    { action: "vm_network", params: { net_type: "clear" } },
+    { action: "kvm_clear" },
+  ];
+
+  const btnText = recoverAllBtn.textContent;
+  recoverAllBtn.textContent = "恢复中...";
+  recoverAllBtn.disabled = true;
+
+  for (const step of plan) {
+    if (!actionTitleMap[step.action]) continue;
+    const startedAt = new Date();
+    const title = `一键恢复 - ${actionTitleMap[step.action] || step.action}`;
+    try {
+      const data = await fetchJson("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: step.action,
+          params: step.params || {},
+          tests: { kvm: false },
+        }),
+      });
+      const entry = buildHistoryEntry(title, step.action, data, startedAt);
+      appendHistory(entry);
+    } catch (err) {
+      const entry = buildErrorEntry(title, step.action, err, startedAt);
+      appendHistory(entry);
+    }
+  }
+
+  recoverAllBtn.textContent = btnText;
+  recoverAllBtn.disabled = false;
 }
 
 function buildHistoryEntry(title, actionKey, data, startedAt) {
@@ -256,35 +374,32 @@ function buildHistoryEntry(title, actionKey, data, startedAt) {
   const body = document.createElement("div");
   body.className = "history-body";
 
-  data.results.forEach((r) => {
-    const res = document.createElement("div");
-    res.className = "result";
-    res.innerHTML = `
-      <div class="result-head">
-        <span class="result-node">${r.node}@${r.host}</span>
-        <span class="result-meta">exit=${r.exit_code} | ${r.elapsed}s</span>
-      </div>
-      <div class="result-cmd">${r.cmd || ""}</div>
-    `;
+  appendResults(body, data.results || []);
 
-    const output = document.createElement("pre");
-    output.className = "result-output";
-    const outText = [r.stdout, r.stderr].filter(Boolean).join("\n");
-    output.textContent = outText || "(无输出)";
+  if (Array.isArray(data.tests) && data.tests.length) {
+    const testSection = document.createElement("div");
+    testSection.className = "test-section";
+    testSection.innerHTML = `<div class="test-head">自动测试</div>`;
 
-    if (r.truncated) {
-      const badge = document.createElement("div");
-      badge.className = "result-trunc";
-      const meta = r.stdout_meta || {};
-      const lines = meta.total_lines || "?";
-      const chars = meta.total_chars || "?";
-      badge.textContent = `输出已截断 (总计 ${lines} 行 / ${chars} 字符)`;
-      res.appendChild(badge);
-    }
+    data.tests.forEach((test) => {
+      const card = document.createElement("div");
+      card.className = `test-card ${test.ok ? "ok" : "bad"}`;
+      card.innerHTML = `
+        <div class="test-card-head">
+          <div class="test-title">${test.title || "自动测试"}</div>
+          <div class="test-status">${test.ok ? "成功" : "失败"}</div>
+        </div>
+      `;
 
-    res.appendChild(output);
-    body.appendChild(res);
-  });
+      const testBody = document.createElement("div");
+      testBody.className = "test-body";
+      appendResults(testBody, test.results || []);
+      card.appendChild(testBody);
+      testSection.appendChild(card);
+    });
+
+    body.appendChild(testSection);
+  }
 
   item.appendChild(header);
   item.appendChild(body);
@@ -325,9 +440,15 @@ async function loadConfig() {
   renderNodes(configCache.nodes || []);
   renderActionSections(configCache.groups || [], configCache.actions || []);
   const outputCfg = configCache.output || {};
-  const maxLines = outputCfg.max_lines || 200;
-  const maxChars = outputCfg.max_chars || 8000;
-  outputLimitEl.textContent = `输出限制: ${maxLines} 行 / ${maxChars} 字符`;
+  const maxLines =
+    typeof outputCfg.max_lines === "number" ? outputCfg.max_lines : 200;
+  const maxChars =
+    typeof outputCfg.max_chars === "number" ? outputCfg.max_chars : 8000;
+  if ((maxLines || 0) <= 0 && (maxChars || 0) <= 0) {
+    outputLimitEl.textContent = "输出限制: 无限制";
+  } else {
+    outputLimitEl.textContent = `输出限制: ${maxLines} 行 / ${maxChars} 字符`;
+  }
 }
 
 refreshBtn.addEventListener("click", () => {
@@ -337,6 +458,12 @@ refreshBtn.addEventListener("click", () => {
 clearBtn.addEventListener("click", () => {
   historyEl.innerHTML = "";
 });
+
+if (recoverAllBtn) {
+  recoverAllBtn.addEventListener("click", () => {
+    runRecoveryAll();
+  });
+}
 
 (async function init() {
   await healthCheck();

@@ -181,6 +181,7 @@ int find_hadoop_pid(const char *proc_name)
 {
     char cmd[256];
     char output[32];
+    const char *full_class = NULL;
 
     // 针对 NameNode 特殊处理，防止匹配到 SecondaryNameNode
     if (strcmp(proc_name, "NameNode") == 0)
@@ -205,10 +206,31 @@ int find_hadoop_pid(const char *proc_name)
     if (fp)
         pclose(fp);
 
-    // 备用方案：使用pgrep
+    // 备用方案：使用 ps + awk 精确匹配 Java 主类，避免 pgrep 误匹配自身
+    if (strcmp(proc_name, "NameNode") == 0)
+        full_class = "org.apache.hadoop.hdfs.server.namenode.NameNode";
+    else if (strcmp(proc_name, "SecondaryNameNode") == 0)
+        full_class = "org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode";
+    else if (strcmp(proc_name, "DataNode") == 0)
+        full_class = "org.apache.hadoop.hdfs.server.datanode.DataNode";
+    else if (strcmp(proc_name, "ResourceManager") == 0)
+        full_class = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager";
+    else if (strcmp(proc_name, "NodeManager") == 0)
+        full_class = "org.apache.hadoop.yarn.server.nodemanager.NodeManager";
+    else if (strcmp(proc_name, "JobHistoryServer") == 0)
+        full_class = "org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer";
+    else if (strcmp(proc_name, "MRAppMaster") == 0)
+        full_class = "org.apache.hadoop.mapreduce.v2.app.MRAppMaster";
+    else if (strcmp(proc_name, "JobTracker") == 0)
+        full_class = "org.apache.hadoop.mapred.JobTracker";
+    else if (strcmp(proc_name, "TaskTracker") == 0)
+        full_class = "org.apache.hadoop.mapred.TaskTracker";
+    else
+        full_class = proc_name;
+
     snprintf(cmd, sizeof(cmd),
-             "pgrep -f 'java.*%s' | head -n 1",
-             proc_name);
+             "ps -eo pid,args | awk -v pat='%s' '$0 ~ /java/ { for (i=2;i<=NF;i++) { if ($i == \"-cp\" || $i == \"-classpath\") { i++; continue; } if ($i ~ /^-/) { continue; } if ($i == pat) {print $1; exit;} break; } }'",
+             full_class);
 
     fp = popen(cmd, "r");
     if (fp != NULL && fgets(output, sizeof(output), fp) != NULL)

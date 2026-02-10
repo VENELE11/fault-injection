@@ -30,6 +30,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 class ActionRequest(BaseModel):
     action: str
     params: Optional[Dict[str, Any]] = None
+    tests: Optional[Dict[str, Any]] = None
 
 
 GROUPS = [
@@ -96,10 +97,16 @@ def get_master_node(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def is_local_node(node: Dict[str, Any]) -> bool:
+    # Honor explicit override first; `local: false` should force SSH even on 127.0.0.1.
     if node.get("local") is True:
         return True
+    if node.get("local") is False:
+        return False
     host = (node.get("host") or "").lower()
-    return host in {"localhost", "127.0.0.1"}
+    # Treat localhost as local only when there's no SSH port override.
+    if host in {"localhost", "127.0.0.1", "::1"} and not node.get("port"):
+        return True
+    return False
 
 
 def build_ssh_command(cfg: Dict[str, Any], node: Dict[str, Any], remote_cmd: List[str]) -> List[str]:
@@ -177,27 +184,230 @@ def run_command(cmd: List[str], timeout: int, output_cfg: Dict[str, Any]) -> Dic
             "elapsed": round(time.time() - started, 3),
             "cmd": cmd_info["text"],
         }
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode(errors="ignore")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode(errors="ignore")
+        if stderr:
+            stderr = f"{stderr}\nTimeout after {timeout}s"
+        else:
+            stderr = f"Timeout after {timeout}s"
+
+        stdout_info = truncate_text(stdout or "", max_lines, max_chars)
+        stderr_info = truncate_text(stderr or "", max_lines, max_chars)
         return {
             "ok": False,
             "exit_code": 124,
-            "stdout": "",
-            "stderr": f"Timeout after {timeout}s",
-            "stdout_meta": {"text": "", "truncated": False, "total_chars": 0, "total_lines": 0},
-            "stderr_meta": {"text": "", "truncated": False, "total_chars": 0, "total_lines": 1},
-            "truncated": False,
+            "stdout": stdout_info["text"].strip(),
+            "stderr": stderr_info["text"].strip(),
+            "stdout_meta": stdout_info,
+            "stderr_meta": stderr_info,
+            "truncated": stdout_info["truncated"] or stderr_info["truncated"],
             "elapsed": round(time.time() - started, 3),
             "cmd": shlex.join(cmd),
         }
 
 
-def run_on_node(cfg: Dict[str, Any], node: Dict[str, Any], cmd: List[str]) -> Dict[str, Any]:
+def run_on_node(
+    cfg: Dict[str, Any],
+    node: Dict[str, Any],
+    cmd: List[str],
+    timeout_override: Optional[int] = None,
+) -> Dict[str, Any]:
     timeout = int(cfg.get("controller", {}).get("command_timeout", 20))
+    if timeout_override is not None:
+        timeout = int(timeout_override)
     output_cfg = cfg.get("output", {})
     if is_local_node(node):
         return run_command(cmd, timeout, output_cfg)
     ssh_cmd = build_ssh_command(cfg, node, cmd)
     return run_command(ssh_cmd, timeout, output_cfg)
+
+
+class _SafeFormat(dict):
+    def __missing__(self, key: str) -> str:
+        return "{" + key + "}"
+
+
+def render_template(value: str, ctx: Dict[str, Any]) -> str:
+    try:
+        return value.format_map(_SafeFormat(ctx))
+    except Exception:
+        return value
+
+
+def normalize_cmds(cmds_spec: Any, ctx: Dict[str, Any]) -> List[List[str]]:
+    if cmds_spec is None:
+        return []
+
+    if not isinstance(cmds_spec, list):
+        cmds_spec = [cmds_spec]
+
+    cmds: List[List[str]] = []
+    for item in cmds_spec:
+        if isinstance(item, str):
+            rendered = render_template(item, ctx)
+            cmds.append(["/bin/sh", "-lc", rendered])
+        elif isinstance(item, list):
+            rendered_parts = [render_template(str(part), ctx) for part in item]
+            cmds.append(rendered_parts)
+        else:
+            continue
+    return cmds
+
+
+def find_node_by_value(cfg: Dict[str, Any], value: str) -> Optional[Dict[str, Any]]:
+    if not value:
+        return None
+    for node in get_nodes(cfg):
+        if node.get("name") == value or node.get("host") == value:
+            return node
+    if validate_ip(value):
+        return {"name": value, "host": value, "local": False}
+    return None
+
+
+def resolve_test_nodes(
+    cfg: Dict[str, Any],
+    scope: str,
+    action_nodes: List[Dict[str, Any]],
+    params: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    if scope == "all":
+        return get_nodes(cfg)
+    if scope == "master":
+        return [get_master_node(cfg)]
+    if scope == "local":
+        return [{"name": "local", "host": "127.0.0.1", "local": True}]
+    if scope == "target":
+        target = params.get("target")
+        node = find_node_by_value(cfg, str(target)) if target else None
+        if node:
+            return [node]
+        return []
+    return action_nodes
+
+
+def resolve_test_sudo(cfg: Dict[str, Any], test_spec: Dict[str, Any], action_spec: Dict[str, Any]) -> bool:
+    if "sudo" not in test_spec:
+        return False
+    sudo_val = test_spec.get("sudo")
+    if isinstance(sudo_val, bool):
+        return sudo_val
+    if sudo_val in {"vm", "kvm", "hadoop"}:
+        return resolve_sudo(cfg, {"sudo": sudo_val})
+    if sudo_val == "action":
+        return resolve_sudo(cfg, action_spec)
+    return False
+
+
+def collect_tests(
+    cfg: Dict[str, Any],
+    action: str,
+    action_spec: Dict[str, Any],
+    params: Dict[str, Any],
+    action_nodes: List[Dict[str, Any]],
+    action_ok: bool,
+    test_flags: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    tests_cfg = cfg.get("tests", {}) if isinstance(cfg.get("tests", {}), dict) else {}
+    if not tests_cfg or not tests_cfg.get("enabled", False):
+        return []
+
+    test_flags = test_flags or {}
+    allow_kvm_tests = bool(test_flags.get("kvm"))
+
+    tests: List[Dict[str, Any]] = []
+
+    defaults = tests_cfg.get("defaults", {})
+    skip_defaults = tests_cfg.get("skip_defaults", []) if isinstance(tests_cfg.get("skip_defaults", []), list) else []
+    tool_key = action_spec.get("tool")
+    if action not in skip_defaults and tool_key == "injector":
+        tests += defaults.get("hadoop", []) if isinstance(defaults.get("hadoop", []), list) else []
+    elif action not in skip_defaults and tool_key and tool_key.startswith("vm_"):
+        tests += defaults.get("vm", []) if isinstance(defaults.get("vm", []), list) else []
+    elif action not in skip_defaults and tool_key == "kvm_injector" and allow_kvm_tests:
+        tests += defaults.get("kvm", []) if isinstance(defaults.get("kvm", []), list) else []
+
+    after = tests_cfg.get("after", {})
+    if isinstance(after, dict):
+        tests += after.get(action, []) if isinstance(after.get(action, []), list) else []
+
+    after_group = tests_cfg.get("after_group", {})
+    group_key = action_spec.get("group", "")
+    if isinstance(after_group, dict) and group_key:
+        if group_key == "kvm" and not allow_kvm_tests:
+            pass
+        else:
+            tests += after_group.get(group_key, []) if isinstance(after_group.get(group_key, []), list) else []
+
+    if not tests:
+        return []
+
+    ctx = build_context(cfg)
+    ctx.update(params)
+
+    results_payload: List[Dict[str, Any]] = []
+    for test in tests:
+        if not isinstance(test, dict):
+            continue
+        if test.get("enabled") is False:
+            continue
+        when = test.get("when", "success")
+        if when == "success" and not action_ok:
+            continue
+
+        scope = test.get("scope", "action")
+        nodes = resolve_test_nodes(cfg, scope, action_nodes, params)
+        if not nodes:
+            continue
+
+        test_title = test.get("title", "自动测试")
+        test_timeout = test.get("timeout")
+        test_cmds_spec = test.get("cmds", test.get("cmd"))
+        test_ok = True
+        test_results: List[Dict[str, Any]] = []
+        for node in nodes:
+            node_ctx = dict(ctx)
+            node_ctx.update(
+                {
+                    "node": node.get("name", ""),
+                    "host": node.get("host", ""),
+                    "port": node.get("port", ""),
+                }
+            )
+            cmds = normalize_cmds(test_cmds_spec, node_ctx)
+            for cmd in cmds:
+                cmd = maybe_sudo(cmd, resolve_test_sudo(cfg, test, action_spec))
+                res = run_on_node(cfg, node, cmd, timeout_override=test_timeout)
+                res.update({"node": node.get("name"), "host": node.get("host")})
+                test_results.append(res)
+                res_ok = bool(res.get("ok"))
+                if not res_ok:
+                    ok_codes = test.get("ok_exit_codes")
+                    allow_timeout = bool(test.get("allow_timeout"))
+                    exit_code = res.get("exit_code")
+                    if isinstance(ok_codes, list) and exit_code in ok_codes:
+                        res["ok"] = True
+                        res_ok = True
+                    elif allow_timeout and exit_code == 124:
+                        res["ok"] = True
+                        res_ok = True
+                if not res_ok:
+                    test_ok = False
+
+        results_payload.append(
+            {
+                "title": test_title,
+                "ok": test_ok,
+                "results": test_results,
+            }
+        )
+
+    return results_payload
 
 
 def _ps_aux() -> str:
@@ -287,11 +497,15 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
     injector = cfg.get("hadoop", {}).get("injector", "")
     vm_cfg = cfg.get("vm", {})
     kvm_cfg = cfg.get("kvm", {})
+    vm_base_dir = vm_cfg.get("base_dir", "")
+    kvm_base_dir = kvm_cfg.get("base_dir", "")
 
     return {
         "hadoop_home": hadoop_home,
         "hadoop_sbin": f"{hadoop_home}/sbin",
         "injector": injector,
+        "vm_base_dir": vm_base_dir,
+        "kvm_base_dir": kvm_base_dir,
         "vm_process_injector": vm_cfg.get("process_injector", ""),
         "vm_network_injector": vm_cfg.get("network_injector", ""),
         "vm_cpu_injector": vm_cfg.get("cpu_injector", ""),
@@ -880,6 +1094,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "desc": "使用 mem_leak 大量占用内存，模拟 OOM。",
         "group": "vm",
         "scope": "local",
+        "timeout": 300,
         "params": [
             {"name": "size_mb", "label": "占用内存 (MB)", "type": "number", "default": 512, "required": True},
         ],
@@ -1237,6 +1452,7 @@ def api_action(req: ActionRequest) -> JSONResponse:
     cfg = load_config()
     action = req.action
     params = req.params or {}
+    test_flags = req.tests or {}
 
     if action not in ACTIONS:
         raise HTTPException(status_code=400, detail="未知操作")
@@ -1287,14 +1503,6 @@ def api_action(req: ActionRequest) -> JSONResponse:
 
     ctx = build_context(cfg)
 
-    tool_key = spec.get("tool")
-    if tool_key:
-        tool_path = ctx.get(tool_key, "")
-        if not tool_path:
-            raise HTTPException(status_code=400, detail="未配置工具路径")
-        if not Path(tool_path).exists():
-            raise HTTPException(status_code=400, detail="工具不存在或路径错误")
-
     scope = spec.get("scope", "master")
     if scope == "all":
         nodes = get_nodes(cfg)
@@ -1303,19 +1511,30 @@ def api_action(req: ActionRequest) -> JSONResponse:
     else:
         nodes = [get_master_node(cfg)]
 
+    tool_key = spec.get("tool")
+    if tool_key:
+        tool_path = ctx.get(tool_key, "")
+        if not tool_path:
+            raise HTTPException(status_code=400, detail="未配置工具路径")
+        # Only validate local path when the command will run locally.
+        if any(is_local_node(n) for n in nodes) and not Path(tool_path).exists():
+            raise HTTPException(status_code=400, detail="工具不存在或路径错误")
+
     use_sudo = resolve_sudo(cfg, spec)
 
     results = []
+    action_timeout = spec.get("timeout")
     for node in nodes:
         cmds = spec["cmds"](ctx, params)
         for cmd in cmds:
             cmd = maybe_sudo(cmd, use_sudo)
-            res = run_on_node(cfg, node, cmd)
+            res = run_on_node(cfg, node, cmd, timeout_override=action_timeout)
             res.update({"node": node.get("name"), "host": node.get("host")})
             results.append(res)
 
     ok = all(r.get("ok") for r in results) if results else False
-    return JSONResponse({"ok": ok, "action": action, "results": results})
+    tests = collect_tests(cfg, action, spec, params, nodes, ok, test_flags=test_flags)
+    return JSONResponse({"ok": ok, "action": action, "results": results, "tests": tests})
 
 
 @app.get("/api/health")

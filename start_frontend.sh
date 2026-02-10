@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VM_DIR="$ROOT_DIR/vm_injection"
+#VM_DIR="$ROOT_DIR/vm_injection"
 LOG_DIR="$ROOT_DIR/.vm_logs"
 
 if [ ! -x "$VM_DIR/run_cluster.sh" ]; then

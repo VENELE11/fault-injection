@@ -160,6 +160,57 @@ body::after {
   gap: 10px;
 }
 
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: #f1f5f9;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.toggle input {
+  display: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #cbd5f5;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+}
+
+.toggle input:checked + .toggle-track {
+  background: rgba(22, 163, 74, 0.5);
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(16px);
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .nodes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -444,7 +495,6 @@ button.ghost:hover {
   border-radius: 10px;
   font-size: 12px;
   line-height: 1.4;
-  max-height: 280px;
   overflow: auto;
 }
 
@@ -452,6 +502,58 @@ button.ghost:hover {
   font-size: 11px;
   color: #a16207;
   margin-bottom: 6px;
+}
+
+.test-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.test-head {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.test-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #f9fafb;
+  padding: 10px 12px;
+}
+
+.test-card.ok {
+  border-left: 4px solid var(--success);
+}
+
+.test-card.bad {
+  border-left: 4px solid var(--danger);
+}
+
+.test-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.test-title {
+  font-weight: 600;
+}
+
+.test-status {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.test-body {
+  display: grid;
+  gap: 10px;
 }
 
 @keyframes fadeUp {
