@@ -582,3 +582,209 @@ button.ghost:hover {
     align-items: flex-start;
   }
 }
+
+/* ================================================================== */
+/*  TEST DASHBOARD                                                      */
+/* ================================================================== */
+
+.hidden { display: none !important; }
+
+/* -- Progress Bar -- */
+.test-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.test-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  width: 0;
+  transition: width 0.4s ease;
+}
+
+.bar-running {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.bar-done  { background: var(--success); }
+.bar-fail  { background: var(--danger); }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* -- Summary Stats -- */
+.test-summary {
+  margin-bottom: 20px;
+}
+
+.ts-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.ts-stat {
+  flex: 1 1 80px;
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.ts-num { font-size: 26px; font-weight: 700; }
+.ts-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ts-pass .ts-num  { color: var(--success); }
+.ts-fail .ts-num  { color: var(--danger); }
+.ts-skip .ts-num  { color: var(--warn); }
+.ts-time .ts-num  { color: var(--accent); }
+
+.ts-rate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ts-rate-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.ts-rate-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.fill-ok   { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.fill-fail { background: linear-gradient(90deg, #f87171, #dc2626); }
+
+.ts-rate-text {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ts-error {
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(220,38,38,0.08);
+  border: 1px solid rgba(220,38,38,0.2);
+}
+
+/* -- Test Groups -- */
+.test-results-container {
+  display: grid;
+  gap: 10px;
+}
+
+.tg-section {
+  animation: fadeUp 0.4s ease both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.tg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.tg-header:hover { filter: brightness(0.97); }
+
+.tg-ok {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid rgba(22,163,74,0.2);
+}
+
+.tg-bad {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid rgba(220,38,38,0.2);
+}
+
+.tg-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tg-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.tg-icon { font-size: 16px; }
+.tg-toggle { font-size: 12px; color: var(--muted); }
+
+.tg-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, padding 0.35s ease;
+  padding: 0 6px;
+}
+
+.tg-body.tg-open {
+  max-height: 2000px;
+  padding: 8px 6px;
+}
+
+.tg-item {
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+}
+
+.ti-ok { background: #f0fdf4; border-left-color: var(--success); }
+.ti-fail { background: #fef2f2; border-left-color: var(--danger); }
+
+.ti-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ti-icon {
+  font-weight: 700;
+  width: 16px;
+  text-align: center;
+}
+
+.ti-ok .ti-icon { color: var(--success); }
+.ti-fail .ti-icon { color: var(--danger); }
+
+.ti-name { flex: 1; }
+.ti-dur { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.ti-msg {
+  margin: 6px 0 0 24px;
+  padding: 8px 10px;
+  background: #0f172a;
+  color: #fca5a5;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

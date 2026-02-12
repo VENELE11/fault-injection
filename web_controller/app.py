@@ -5,6 +5,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -1410,6 +1411,179 @@ def index() -> FileResponse:
     return FileResponse(static_dir / "index.html")
 
 
+@app.get("/test")
+def test_page() -> FileResponse:
+    return FileResponse(static_dir / "test.html")
+
+
+# ---------------------------------------------------------------------------
+#  Functional test API
+# ---------------------------------------------------------------------------
+
+from web_controller.test_scenarios import FUNC_TESTS, FUNC_TESTS_MAP  # noqa: E402
+
+
+class FuncTestRequest(BaseModel):
+    key: str
+    params: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/testcases")
+def api_testcases() -> JSONResponse:
+    """Return all functional test scenario definitions for the frontend."""
+    cases = []
+    for t in FUNC_TESTS:
+        cases.append({
+            "key": t["key"],
+            "title": t["title"],
+            "desc": t["desc"],
+            "group": t["group"],
+            "params": t.get("params", []),
+            "has_baseline": bool(t.get("baseline")),
+            "has_cleanup": bool(t.get("cleanup")),
+        })
+    return JSONResponse({"tests": cases, "groups": GROUPS})
+
+
+def _run_check_cmds(
+    cfg: Dict[str, Any],
+    checks: List[Dict[str, Any]],
+    params: Dict[str, Any],
+    ctx: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Execute a list of check commands (baseline or verify) and return results."""
+    results: List[Dict[str, Any]] = []
+    for check in checks:
+        title = check.get("title", "检查")
+        cmd_tpl = check.get("cmd", "")
+        scope = check.get("scope", "master")
+
+        # Render template variables into the command
+        check_ctx = dict(ctx)
+        check_ctx.update(params)
+        try:
+            rendered = cmd_tpl.format_map(_SafeFormat(check_ctx))
+        except Exception:
+            rendered = cmd_tpl
+
+        # Determine nodes based on scope
+        if scope == "all":
+            nodes = get_nodes(cfg)
+        elif scope == "local":
+            nodes = [{"name": "local", "host": "127.0.0.1", "local": True}]
+        else:
+            nodes = [get_master_node(cfg)]
+
+        node_results = []
+        for node in nodes:
+            cmd = ["/bin/sh", "-lc", rendered]
+            res = run_on_node(cfg, node, cmd, timeout_override=15)
+            res.update({"node": node.get("name"), "host": node.get("host")})
+            node_results.append(res)
+
+        results.append({
+            "title": title,
+            "cmd": rendered,
+            "scope": scope,
+            "results": node_results,
+            "ok": all(r.get("ok") for r in node_results) if node_results else True,
+        })
+    return results
+
+
+@app.post("/api/functest")
+def api_functest(req: FuncTestRequest) -> JSONResponse:
+    """Run a single functional test scenario with baseline → action → verify."""
+    test_key = req.key
+    user_params = req.params or {}
+
+    if test_key not in FUNC_TESTS_MAP:
+        raise HTTPException(status_code=400, detail=f"未知测试: {test_key}")
+
+    scenario = FUNC_TESTS_MAP[test_key]
+    cfg = load_config()
+    ctx = build_context(cfg)
+
+    # Merge default action params with user params
+    action_params = dict(scenario.get("action_params", {}))
+    action_params.update(user_params)
+
+    # 1. Baseline checks
+    baseline_results = _run_check_cmds(
+        cfg, scenario.get("baseline", []), action_params, ctx,
+    )
+
+    # 2. Execute the action
+    action_key = scenario["action"]
+    action_response = None
+    action_ok = False
+    if action_key and action_key in ACTIONS:
+        try:
+            # Call the existing action endpoint directly via internal logic
+            spec = ACTIONS[action_key]
+            param_defs = spec.get("params", [])
+
+            # Apply same validation as api_action
+            for p in param_defs:
+                name = p.get("name")
+                required = bool(p.get("required", True))
+                if required and (name not in action_params or action_params[name] in (None, "")):
+                    raise HTTPException(status_code=400, detail=f"缺少测试参数: {name}")
+
+            scope = spec.get("scope", "master")
+            if scope == "all":
+                nodes = get_nodes(cfg)
+            elif scope == "local":
+                nodes = [{"name": "local", "host": "127.0.0.1", "local": True}]
+            else:
+                nodes = [get_master_node(cfg)]
+
+            use_sudo = resolve_sudo(cfg, spec)
+            action_results = []
+            action_timeout = spec.get("timeout")
+            for node in nodes:
+                cmds = spec["cmds"](ctx, action_params)
+                for cmd in cmds:
+                    cmd = maybe_sudo(cmd, use_sudo)
+                    res = run_on_node(cfg, node, cmd, timeout_override=action_timeout)
+                    res.update({"node": node.get("name"), "host": node.get("host")})
+                    action_results.append(res)
+
+            action_ok = all(r.get("ok") for r in action_results) if action_results else False
+            action_response = {
+                "ok": action_ok,
+                "action": action_key,
+                "results": action_results,
+            }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            action_response = {
+                "ok": False,
+                "action": action_key,
+                "results": [],
+                "error": str(exc),
+            }
+
+    # 3. Verify checks
+    verify_results = _run_check_cmds(
+        cfg, scenario.get("verify", []), action_params, ctx,
+    )
+
+    # Build response
+    return JSONResponse({
+        "key": test_key,
+        "title": scenario["title"],
+        "ok": action_ok,
+        "baseline": baseline_results,
+        "action": action_response,
+        "verify": verify_results,
+        "has_cleanup": bool(scenario.get("cleanup")),
+        "cleanup_action": scenario.get("cleanup"),
+        "cleanup_params": scenario.get("cleanup_params", scenario.get("cleanup_params_override", {})),
+    })
+
+
 @app.on_event("startup")
 def auto_start_vms() -> None:
     for node in ("master", "slave1", "slave2"):
@@ -1535,6 +1709,84 @@ def api_action(req: ActionRequest) -> JSONResponse:
     ok = all(r.get("ok") for r in results) if results else False
     tests = collect_tests(cfg, action, spec, params, nodes, ok, test_flags=test_flags)
     return JSONResponse({"ok": ok, "action": action, "results": results, "tests": tests})
+
+
+@app.get("/api/test")
+def api_test() -> JSONResponse:
+    """Run the pytest suite and return structured JSON results."""
+    import subprocess as _sp
+    import json as _json
+    import tempfile as _tf
+
+    tests_dir = BASE_DIR / "tests"
+    if not tests_dir.exists():
+        return JSONResponse({"ok": False, "error": "tests/ directory not found", "tests": [], "summary": {}})
+
+    with _tf.TemporaryDirectory() as tmpdir:
+        report_path = Path(tmpdir) / "report.json"
+        cmd = [
+            sys.executable, "-m", "pytest",
+            str(tests_dir),
+            "--tb=short",
+            "-q",
+            f"--json-report-file={report_path}",
+            "--json-report",
+        ]
+        try:
+            result = _sp.run(cmd, capture_output=True, text=True, timeout=120, check=False,
+                             cwd=str(REPO_ROOT))
+        except _sp.TimeoutExpired:
+            return JSONResponse({"ok": False, "error": "Test execution timed out", "tests": [], "summary": {}})
+
+        if not report_path.exists():
+            return JSONResponse({
+                "ok": False,
+                "error": f"pytest failed to produce report.\nstdout: {result.stdout[-2000:]}\nstderr: {result.stderr[-2000:]}",
+                "tests": [],
+                "summary": {},
+            })
+
+        report = _json.loads(report_path.read_text(encoding="utf-8"))
+
+    tests_out: list = []
+    for t in report.get("tests", []):
+        node_id = t.get("nodeid", "")
+        # Extract group from class name: "tests/test_app.py::TestValidateIp::test_xxx" -> "TestValidateIp"
+        parts = node_id.split("::")
+        group = parts[1] if len(parts) >= 3 else "Other"
+        name = parts[-1] if parts else node_id
+
+        outcome = t.get("outcome", "unknown")
+        duration = round(t.get("duration", 0), 4)
+
+        message = ""
+        call_info = t.get("call", {})
+        if outcome == "failed":
+            crash = call_info.get("crash", {})
+            longrepr = call_info.get("longrepr", "")
+            message = crash.get("message", "") or (longrepr[:500] if isinstance(longrepr, str) else "")
+
+        tests_out.append({
+            "name": name,
+            "group": group,
+            "passed": outcome == "passed",
+            "outcome": outcome,
+            "duration": duration,
+            "message": message,
+        })
+
+    summary_raw = report.get("summary", {})
+    summary = {
+        "total": summary_raw.get("total", 0),
+        "passed": summary_raw.get("passed", 0),
+        "failed": summary_raw.get("failed", 0),
+        "error": summary_raw.get("error", 0),
+        "skipped": summary_raw.get("skipped", 0),
+        "duration": round(report.get("duration", 0), 3),
+    }
+
+    all_passed = summary.get("failed", 0) == 0 and summary.get("error", 0) == 0
+    return JSONResponse({"ok": all_passed, "tests": tests_out, "summary": summary})
 
 
 @app.get("/api/health")

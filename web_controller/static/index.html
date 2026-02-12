@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>故障注入控制器</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
+
 <body>
   <div class="page">
     <header class="hero">
@@ -44,6 +46,20 @@
       <div id="actionsContainer" class="action-sections"></div>
     </section>
 
+    <section class="panel" id="testPanel">
+      <div class="panel-head">
+        <div>
+          <h2>功能测试</h2>
+          <p>逐项运行功能测试，查看操作前后的对比结果。</p>
+        </div>
+        <div class="panel-actions">
+          <a href="/test" class="primary"
+            style="display:inline-block;text-decoration:none;padding:8px 20px;border-radius:10px;font-weight:600;font-size:14px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;">进入测试页
+            →</a>
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="panel-head">
         <div>
@@ -62,4 +78,5 @@
 
   <script src="/static/app.js"></script>
 </body>
+
 </html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>功能测试 — 云平台故障注入</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/test.css" />
+</head>
+
+<body>
+
+    <header class="top-bar">
+        <a href="/" class="back-link">← 返回控制台</a>
+        <h1>功能测试</h1>
+        <p class="subtitle">选择测试场景，独立运行并查看前后对比结果</p>
+    </header>
+
+    <div class="layout">
+        <!-- Left: group navigation -->
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <!-- Right: test cards area -->
+        <main class="main-area">
+            <div id="testList" class="test-list"></div>
+            <div id="testDetail" class="test-detail hidden"></div>
+        </main>
+    </div>
+
+    <script src="/static/test.js"></script>
+</body>
+
+</html>
