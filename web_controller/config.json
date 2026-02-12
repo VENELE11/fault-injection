@@ -29,7 +29,7 @@
   ],
   "hadoop": {
     "home": "/opt/hadoop",
-    "injector": "/home/hadoop-fi/hadoop_injector",
+    "injector": "/root/hadoop-fi/hadoop_injector",
     "use_sudo": false
   },
   "vm": {
