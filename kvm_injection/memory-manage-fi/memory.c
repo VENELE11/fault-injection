@@ -14,7 +14,7 @@ MODULE_AUTHOR("ARM-FI-Team");
 
 /* 目标函数 */
 #define TARGET_1 "kvm_set_memory_region"
-#define TARGET_2 "gfn_to_hva_many" /* ARM64 上可能是这个 symbol */
+#define TARGET_2 "gfn_to_hva_many" 
 
 /* 全局控制变量 */
 static int target_class = 0; // 1: kvm_set_memory_region, 2: gfn_to_hva_many

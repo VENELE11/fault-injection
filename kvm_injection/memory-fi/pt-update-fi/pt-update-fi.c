@@ -43,16 +43,6 @@ static int handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
     if (inject_signal && fault_times > 0)
     {
-        /*
-         * 模拟故障：
-         * 我们无法安全地在 pre_handler 里直接 "return"，
-         * 除非修改 PC = LR。
-         *
-         * 既然之前的测试没反应，我们先只打印一条强烈的日志，
-         * 证明我们确实拦截到了这个函数。
-         * 如果能看到日志刷屏，说明注入点选对了。
-         */
-
         // 简单计数
         fault_times--;
         if (fault_times % 10 == 0)

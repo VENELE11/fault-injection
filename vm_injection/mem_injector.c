@@ -77,7 +77,7 @@ long ptrace_read(pid_t pid, unsigned long addr)
     long data = ptrace(PTRACE_PEEKDATA, pid, (void *)addr, NULL);
     // 在扫描过程中，可能会读到无效地址，此处不直接退出，而是交给调用者处理
     // 但为了保持原逻辑兼容，如果 errno 被设置则报错
-    // 在扫描模式下，如果读失败，通常意味着页面不可读，我们可以忽略并继续
+    // 在扫描模式下，如果读失败，通常意味着页面不可读，忽略并继续
     return data;
 }
 

@@ -34,8 +34,7 @@ static int handler_pre(struct kprobe *p, struct pt_regs *regs)
         
         // 简单策略：修改参数 pgdat (X0) 为 NULL
         // 这通常会导致函数内部检查参数时直接返回，或者 Crash (取决于内核健壮性)。
-        // 更安全的做法是利用 override_function，但那是高版本特性。
-        
+        // 更安全的做法是利用 override_function。
         // 我们尝试通过修改 X0 = 0 (Node Ptr) 来让它失效
         regs->regs[0] = 0; 
         printk(KERN_INFO "[ARM-Kswapd-Fi] Force shrink_node(NULL). Preventing reclaim.\n");

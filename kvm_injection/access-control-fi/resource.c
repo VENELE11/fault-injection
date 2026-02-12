@@ -19,7 +19,7 @@ static struct proc_dir_entry *dir = NULL;
 // 各个 proc 入口
 static int position = 0;   // 1=CMD, 2=ARG
 static int type = 0;       // 1=Flip, 2=Set1, 3=Set0
-static int time_cnt = 0;   // 注意: 原版用 time 变量名，建议用 time_cnt
+static int time_cnt = 0;
 static int signal = 0;
 static int persistence = 0; // 0=Transient, 1=Persistent
 
@@ -83,7 +83,7 @@ static int handler_pre(struct kprobe *p, struct pt_regs *regs)
     return 0;
 }
 
-// === Proc Write Functions (仿照原版) ===
+// === Proc Write Functions  ===
 static ssize_t proc_write_common(struct file *file, const char __user *buf, size_t count, int *val)
 {
     if(count <= 0 || count >= MAX_LINE) return -EFAULT;

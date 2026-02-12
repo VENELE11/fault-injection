@@ -24,11 +24,11 @@ static struct proc_dir_entry *pdir;
 
 /*
  * Ret-Handler:
- * 检查返回值。如果是版本号 (通常是 12)，我们将其篡改。
+ * 检查返回值。如果是版本号 (通常是 12)，将其篡改。
  * 由于 kretprobe 拿不到 entry 时的参数，如果不配合 entry_handler 
  * 很难区分具体的 ioctl command。
  * 
- * 简化策略：只要返回值等于 KVM_API_VERSION (12)，我们就将其改为 0。
+ * 简化策略：只要返回值等于 KVM_API_VERSION (12)，就将其改为 0。
  */
 #define KVM_API_VER 12
 

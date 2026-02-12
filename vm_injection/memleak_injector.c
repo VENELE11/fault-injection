@@ -31,8 +31,6 @@ int main(int argc, char *argv[])
     printf("注意：这会触发系统级压力，可能导致 Swap 交换或进程被杀。\n");
     printf(" 开始吞噬内存...\n");
 
-    // 指针数组，用于防止内存被优化释放
-    // 简单起见，我们只分配，不记录所有指针，因为我们不打算 free
 
     while (current_bytes < total_bytes)
     {

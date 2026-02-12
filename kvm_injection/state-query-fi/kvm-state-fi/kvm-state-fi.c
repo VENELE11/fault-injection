@@ -11,7 +11,7 @@ MODULE_AUTHOR("ARM-FI-Team");
 
 #define PROC_DIR "kvm-state-fi"
 /*
- * 更换靶子: kvm_vcpu_ioctl
+ * 靶子: kvm_vcpu_ioctl
  * 这是一个非常高频的函数，QEMU 与 KVM 交互 90% 都走这里。
  * 拦截它并返回错误，QEMU 必定感知到。
  */

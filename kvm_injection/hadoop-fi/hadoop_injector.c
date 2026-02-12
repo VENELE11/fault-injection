@@ -1,5 +1,5 @@
 /*
- * hadoop_injector.c - Hadoop集群故障注入工具 (分布式控制完整版)
+ * hadoop_injector.c - Hadoop集群故障注入工具
  *
  * 功能：针对Hadoop生态系统（HDFS/YARN/MapReduce）进行多层次故障注入
  * 支持：
@@ -25,9 +25,8 @@
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-// ==========================================
-// ===  集群配置 (请根据您的环境修改)     ===
-// ==========================================
+
+//集群配置
 const char *SLAVE_HOSTS[] = {
     "192.168.1.11", // Slave1 IP
     "192.168.1.12"  // Slave2 IP
@@ -36,7 +35,7 @@ const char *SLAVE_HOSTS[] = {
 
 // 定义工具在所有节点上的绝对路径
 #define REMOTE_TOOL_PATH "/root/hadoop-fi/hadoop_injector"
-// ==========================================
+
 
 // === Hadoop组件进程名定义 ===
 // Hadoop 1.x 进程名
@@ -61,7 +60,7 @@ const char *SLAVE_HOSTS[] = {
 #define RESOURCEMANAGER_PORT 8088
 #define NODEMANAGER_PORT 8042
 
-// === 故障类型枚举 (扩展版) ===
+// === 故障类型枚举 ===
 typedef enum
 {
     HADOOP_FAULT_CRASH = 1,           // 进程崩溃 (SIGKILL)
@@ -89,7 +88,6 @@ typedef enum
     COMPONENT_NODE_MGR = 4,
     COMPONENT_SECONDARY_NN = 5,
     COMPONENT_HISTORY_SERVER = 6,
-    // 新增：任务进程
     COMPONENT_MAP = 7,        // Map任务进程
     COMPONENT_REDUCE = 8,     // Reduce任务进程
     COMPONENT_APP_MASTER = 9, // ApplicationMaster
@@ -103,8 +101,7 @@ static volatile int g_stress_running = 0;
 static pthread_t *g_stress_threads = NULL;
 static int g_stress_thread_count = 0;
 
-// === 核心：获取进程真实状态 (新增) ===
-// 必须定义在 print/list 函数之前
+// === 核心：获取进程真实状态 ===
 char get_proc_state(int pid)
 {
     char path[128], buf[256];
@@ -341,8 +338,7 @@ int exec_remote_injector(const char *host, const char *args)
     return system(cmd);
 }
 
-// === 辅助函数：列出本机进程 (Renamed from list_hadoop_processes) ===
-// 改名为 list_local_processes 并增加状态显示
+// === 辅助函数：列出本机进程 ===
 void list_local_processes(const char *hostname_prefix)
 {
     char hostname[64];
@@ -445,8 +441,7 @@ void list_cluster_processes()
     printf("╚══════════════════════════════════════════════════════════════╝\n");
 }
 
-// === 模块1：进程故障注入 (纯本地执行) ===
-// 此函数对应原文件的 inject_process_fault，但我们将其重命名为本地执行版本
+// === 模块1：进程故障注入 ===
 int exec_local_process_fault(HadoopComponent component, HadoopFaultType fault_type)
 {
     const char *proc_name = get_component_name(component);
@@ -1135,16 +1130,14 @@ int main(int argc, char *argv[])
 
         printf("[Success] 全集群网络规则已清除。\n");
     }
-    // === 新增：查看当前规则 ===
+    // === 查看当前规则 ===
     else if (strcmp(action, "delay-show") == 0)
     {
         printf("--- Current Network Rules (eth1) ---\n");
         system("tc qdisc show dev eth1");
     }
-    // ============================================================
-    // [修改] cpu-stress 命令：支持远程分发
+    // cpu-stress 命令：支持远程分发
     // 用法: ./hadoop_injector cpu-stress <target> <duration> [threads]
-    // ============================================================
     else if (strcmp(action, "cpu-stress") == 0)
     {
         if (argc < 4)
@@ -1205,9 +1198,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // ============================================================
-    // [新增] cpu-stress-local：Slave 真正执行的内部命令
-    // ============================================================
+    // cpu-stress-local：Slave 真正执行的内部命令
+
     else if (strcmp(action, "cpu-stress-local") == 0)
     {
         // 参数: cpu-stress-local <duration> <threads>
@@ -1219,10 +1211,8 @@ int main(int argc, char *argv[])
         printf("[Slave] 收到 CPU 压力指令: %d秒, %d线程\n", duration, threads);
         inject_cpu_stress(duration, threads);
     }
-    // ============================================================
-    // [修改] mem-stress 命令：支持远程分发
+    // mem-stress 命令：支持远程分发
     // 用法: ./hadoop_injector mem-stress <target> <size_mb>
-    // ============================================================
     else if (strcmp(action, "mem-stress") == 0)
     {
         if (argc < 4)
@@ -1276,9 +1266,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // ============================================================
-    // [新增] mem-stress-local：Slave 执行端
-    // ============================================================
+    // mem-stress-local：Slave 执行端
     else if (strcmp(action, "mem-stress-local") == 0)
     {
         if (argc < 3)
@@ -1288,9 +1276,7 @@ int main(int argc, char *argv[])
         inject_memory_stress(size_mb);
     }
 
-    // ============================================================
-    // [修改] mem-stress-clear：分布式清理
-    // ============================================================
+    // mem-stress-clear：分布式清理
     else if (strcmp(action, "mem-stress-clear") == 0)
     {
         printf("[Master] 正在清理全集群内存压力...\n");
@@ -1309,10 +1295,8 @@ int main(int argc, char *argv[])
         }
         printf("[Success] 内存压力已释放。\n");
     }
-    // ============================================================
-    // [新增] loss 命令：网络丢包 (分布式)
+    // loss 命令：网络丢包 (分布式)
     // 用法: ./hadoop_injector loss <target> <percent>
-    // ============================================================
     else if (strcmp(action, "loss") == 0)
     {
         if (argc < 4)
@@ -1390,9 +1374,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // ============================================================
-    // [新增] loss-clear：分布式清理
-    // ============================================================
+    // loss-clear：分布式清理
     else if (strcmp(action, "loss-clear") == 0)
     {
         printf("[Master] 正在清理全集群网络丢包...\n");
@@ -1477,11 +1459,9 @@ int main(int argc, char *argv[])
         printf("[Success] 乱序规则已清除。\n");
     }
 
-    // ============================================================
-    // [新增] 2. isolate 命令：网络隔离/分区 (分布式)
+    // isolate 命令：网络隔离/分区 (分布式)
     // 用法: isolate <target_ip> [port] (如果不指定端口，则完全断网)
     // 底层依赖: iptables (你的代码中已有 inject_network_fault)
-    // ============================================================
     else if (strcmp(action, "isolate") == 0)
     {
         if (argc < 3)
@@ -1591,10 +1571,8 @@ int main(int argc, char *argv[])
         }
         printf("[Success] 防火墙规则已重置。\n");
     }
-    // ============================================================
-    // [新增] 3. disk-fill 命令：磁盘空间填满 (分布式)
+    // disk-fill 命令：磁盘空间填满 (分布式)
     // 用法: disk-fill <target> <size_mb>
-    // ============================================================
     else if (strcmp(action, "disk-fill") == 0)
     {
         if (argc < 4)
@@ -1695,10 +1673,8 @@ int main(int argc, char *argv[])
         system(new_cmd);
     }
 
-    // ============================================================
-    // [新增] 6. MapReduce 任务故障 (需要集群正在运行作业)
+    // MapReduce 任务故障 (需要集群正在运行作业)
     // 用法: crash-map <target_slave>  或  crash-reduce <target_slave>
-    // ============================================================
     else if (strcmp(action, "crash-map") == 0 || strcmp(action, "crash-reduce") == 0)
     {
         if (argc < 3)
@@ -1750,10 +1726,8 @@ int main(int argc, char *argv[])
         // 调用底层 inject_mapreduce_fault (HADOOP_FAULT_CRASH = 1)
         inject_mapreduce_fault(task_type, HADOOP_FAULT_CRASH);
     }
-    // ============================================================
-    // [补全] 7. io-slow 命令：模拟磁盘 I/O 缓慢 (分布式)
+    // io-slow 命令：模拟磁盘 I/O 缓慢 (分布式)
     // 用法: io-slow <target> <on|off>
-    // ============================================================
     else if (strcmp(action, "io-slow") == 0)
     {
         if (argc < 4)
@@ -1798,10 +1772,8 @@ int main(int argc, char *argv[])
         inject_io_delay(is_on);
     }
 
-    // ============================================================
-    // [补全] 8. yarn-unhealthy 命令：模拟 NodeManager 不健康
+    // yarn-unhealthy 命令：模拟 NodeManager 不健康
     // 用法: yarn-unhealthy <target> <on|off>
-    // ============================================================
     else if (strcmp(action, "yarn-unhealthy") == 0)
     {
         if (argc < 4)
@@ -1839,10 +1811,8 @@ int main(int argc, char *argv[])
         printf("[Slave] 修改 YARN 健康检查文件...\n");
         inject_yarn_fault(type, NULL);
     }
-    // ============================================================
-    // [补全] 9. heartbeat 命令：心跳超时模拟 (语义化封装)
+    // heartbeat 命令：心跳超时模拟 (语义化封装)
     // 用法: heartbeat <target> <ms>
-    // ============================================================
     else if (strcmp(action, "heartbeat") == 0)
     {
         if (argc < 4)
@@ -1850,7 +1820,7 @@ int main(int argc, char *argv[])
             printf("Usage: %s heartbeat <target> <ms>\n", argv[0]);
             return 1;
         }
-        // 直接复用 delay 的逻辑，但语义上是“心跳超时”
+        // 复用 delay 逻辑
         char new_cmd[512];
         snprintf(new_cmd, sizeof(new_cmd), "%s delay %s %s", argv[0], argv[2], argv[3]);
         system(new_cmd);
