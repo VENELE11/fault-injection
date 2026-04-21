@@ -23,7 +23,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* 原版参数较少，此处进入向导模式 */
     printf("ARM64 Access Control (Resource) FI\n");
     printf("----------------------------------\n");
     
@@ -42,10 +41,6 @@ int main(int argc, char **argv)
     scanf("%d", &input);
     write_proc("time", input);
     
-    // 4. 模式 (原版有 style)
-    // printf("模式 (0:Transient, 2:Persistent): ");
-    // scanf("%d", &input);
-    // write_proc("style", input);
 
     // 5. 触发
     write_proc("signal", 1);

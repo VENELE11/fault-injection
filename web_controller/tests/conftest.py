@@ -33,6 +33,11 @@ MOCK_CONFIG: Dict[str, Any] = {
         "injector": "/usr/local/bin/hadoop_injector",
         "use_sudo": False,
     },
+    "cloudstack": {
+        "base_dir": "/tmp/kvm_injection/cloudstack-fi",
+        "injector": "/tmp/kvm_injection/cloudstack-fi/cloudstack_injector",
+        "use_sudo": True,
+    },
     "vm": {
         "base_dir": "/tmp/vm_injection",
         "process_injector": "/tmp/vm_injection/process_injector",

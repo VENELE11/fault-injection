@@ -25,8 +25,7 @@
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-
-//集群配置
+// 集群配置
 const char *SLAVE_HOSTS[] = {
     "192.168.1.11", // Slave1 IP
     "192.168.1.12"  // Slave2 IP
@@ -35,7 +34,6 @@ const char *SLAVE_HOSTS[] = {
 
 // 定义工具在所有节点上的绝对路径
 #define REMOTE_TOOL_PATH "/root/hadoop-fi/hadoop_injector"
-
 
 // === Hadoop组件进程名定义 ===
 // Hadoop 1.x 进程名
@@ -333,7 +331,7 @@ int exec_remote_injector(const char *host, const char *args)
 {
     char cmd[1024];
     printf(" [Remote] 连接到 %s 执行命令...\n", host);
-    snprintf(cmd, sizeof(cmd), "ssh -o StrictHostKeyChecking=no root@%s '%s %s'",
+    snprintf(cmd, sizeof(cmd), "ssh -o StrictHostKeyChecking=no root@%s \"%s %s\"",
              host, REMOTE_TOOL_PATH, args);
     return system(cmd);
 }
@@ -432,7 +430,7 @@ void list_cluster_processes()
     {
         char cmd[1024];
         // 远程调用 list-local 命令
-        snprintf(cmd, sizeof(cmd), "ssh -o StrictHostKeyChecking=no root@%s '%s list-local'",
+        snprintf(cmd, sizeof(cmd), "ssh -o StrictHostKeyChecking=no root@%s \"%s list-local\"",
                  SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
 
         printf("正在查询 Slave: %s ...\n", SLAVE_HOSTS[i]);
@@ -782,13 +780,17 @@ int inject_io_delay(int enable)
             "echo '+io' > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null || true; "
             // 2) 创建子 cgroup
             "mkdir -p /sys/fs/cgroup/io_limited; "
-            // 3) 设置限速 - 设备号 253:0
-            "echo '253:0 rbps=1048576 wbps=1048576' > /sys/fs/cgroup/io_limited/io.max; "
+            // 3) 自动探测根分区设备号，避免写死 253:0 导致限速不生效
+            "dev=$(findmnt -n -o SOURCE / 2>/dev/null | head -n1); "
+            "majmin=''; "
+            "if [ -n \"$dev\" ]; then majmin=$(lsblk -ndo MAJ:MIN \"$dev\" 2>/dev/null | head -n1); fi; "
+            "if [ -z \"$majmin\" ]; then majmin='253:0'; fi; "
+            "echo \"$majmin rbps=1048576 wbps=1048576\" > /sys/fs/cgroup/io_limited/io.max; "
             // 4) 将所有 Java 进程加入限速 cgroup
             "for pid in $(pgrep -f java 2>/dev/null); do "
             "  echo $pid > /sys/fs/cgroup/io_limited/cgroup.procs 2>/dev/null || true; "
             "done; "
-            "echo '[IO] 限速已启用 (253:0, 1MB/s)'");
+            "echo \"[IO] 限速已启用 ($majmin, 1MB/s)\"");
 
         if (ret != 0)
         {
@@ -1065,7 +1067,7 @@ int main(int argc, char *argv[])
                 // 构造远程命令: ssh root@192.168.1.11 '... delay-local global 200 ...'
                 char remote_cmd[512];
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s delay-local global %d %d'",
+                         "ssh root@%s \"%s delay-local global %d %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, ms, jitter);
 
                 printf("[Master] 正在向 %s (%s) 分发延迟指令...\n", input_target, target_ip);
@@ -1121,7 +1123,7 @@ int main(int argc, char *argv[])
             // 构造远程命令: ssh root@slaveX '... delay-local global 0 0'
             // "global 0 0" 意味着延迟为 0，底层会自动执行删除规则操作
             snprintf(remote_cmd, sizeof(remote_cmd),
-                     "ssh root@%s '%s delay-local global 0 0'",
+                     "ssh root@%s \"%s delay-local global 0 0\"",
                      SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
 
             printf("  -> 正在清理节点 %s ...\n", SLAVE_HOSTS[i]);
@@ -1177,7 +1179,7 @@ int main(int argc, char *argv[])
                 char remote_cmd[512];
                 // 构造远程命令: ssh ... cpu-stress-local <duration> <threads>
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s cpu-stress-local %d %d'",
+                         "ssh root@%s \"%s cpu-stress-local %d %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, duration, threads);
 
                 printf("[Master] 正在向 %s 发送 CPU 压力指令 (持续%ds)...\n", input_target, duration);
@@ -1249,7 +1251,7 @@ int main(int argc, char *argv[])
                 char remote_cmd[512];
                 // 发送 mem-stress-local 指令
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s mem-stress-local %d'",
+                         "ssh root@%s \"%s mem-stress-local %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, size_mb);
 
                 printf("[Master] 正在向 %s 注入内存压力 (%d MB)...\n", input_target, size_mb);
@@ -1289,7 +1291,7 @@ int main(int argc, char *argv[])
         {
             char remote_cmd[512];
             snprintf(remote_cmd, sizeof(remote_cmd),
-                     "ssh root@%s '%s mem-stress-local 0'",
+                     "ssh root@%s \"%s mem-stress-local 0\"",
                      SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
             system(remote_cmd);
         }
@@ -1334,7 +1336,7 @@ int main(int argc, char *argv[])
                 // 发送 loss-local 指令
                 // 格式: loss-local global <percent>
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s loss-local global %d'",
+                         "ssh root@%s \"%s loss-local global %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, percent);
 
                 printf("[Master] 正在向 %s 注入 %d%% 丢包率...\n", input_target, percent);
@@ -1385,7 +1387,7 @@ int main(int argc, char *argv[])
         {
             char remote_cmd[512];
             snprintf(remote_cmd, sizeof(remote_cmd),
-                     "ssh root@%s '%s loss-local global 0'",
+                     "ssh root@%s \"%s loss-local global 0\"",
                      SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
             system(remote_cmd);
         }
@@ -1424,7 +1426,7 @@ int main(int argc, char *argv[])
                 is_remote = 1;
                 char remote_cmd[512];
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s reorder-local global %d %d'",
+                         "ssh root@%s \"%s reorder-local global %d %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, percent, correlation);
                 printf("[Master] 向 %s 注入 %d%% 乱序 (相关性%d%%)...\n", input_target, percent, correlation);
                 system(remote_cmd);
@@ -1453,7 +1455,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < SLAVE_COUNT; i++)
         {
             char cmd[512];
-            snprintf(cmd, sizeof(cmd), "ssh root@%s '%s reorder-local global 0 0'", SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
+            snprintf(cmd, sizeof(cmd), "ssh root@%s \"%s reorder-local global 0 0\"", SLAVE_HOSTS[i], REMOTE_TOOL_PATH);
             system(cmd);
         }
         printf("[Success] 乱序规则已清除。\n");
@@ -1498,7 +1500,7 @@ int main(int argc, char *argv[])
                 // 简单起见，这里实现的是“隔离该节点的所有入站/出站流量”
                 // 传 "all" 给 local 命令表示针对所有 IP 隔离，或者指定 IP
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s isolate-local all %d'",
+                         "ssh root@%s \"%s isolate-local all %d\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, port);
                 printf("[Master] 正在隔离节点 %s (端口: %d)...\n", input_target, port);
                 system(remote_cmd);
@@ -1566,7 +1568,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < SLAVE_COUNT; i++)
         {
             char cmd[256];
-            snprintf(cmd, sizeof(cmd), "ssh root@%s 'iptables -F'", SLAVE_HOSTS[i]);
+            snprintf(cmd, sizeof(cmd), "ssh root@%s iptables -F", SLAVE_HOSTS[i]);
             system(cmd);
         }
         printf("[Success] 防火墙规则已重置。\n");
@@ -1595,7 +1597,7 @@ int main(int argc, char *argv[])
             {
                 is_remote = 1;
                 char remote_cmd[512];
-                snprintf(remote_cmd, sizeof(remote_cmd), "ssh root@%s '%s disk-fill-local %d'", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, size_mb);
+                snprintf(remote_cmd, sizeof(remote_cmd), "ssh root@%s \"%s disk-fill-local %d\"", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, size_mb);
                 printf("[Master] 令 %s 填充磁盘 %dMB...\n", input_target, size_mb);
                 system(remote_cmd);
                 break;
@@ -1625,7 +1627,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < SLAVE_COUNT; i++)
         {
             char cmd[256];
-            snprintf(cmd, sizeof(cmd), "ssh root@%s 'rm -f /tmp/disk_hog'", SLAVE_HOSTS[i]);
+            snprintf(cmd, sizeof(cmd), "ssh root@%s rm -f /tmp/disk_hog", SLAVE_HOSTS[i]);
             system(cmd);
         }
         printf("[Success] 磁盘空间已释放。\n");
@@ -1703,7 +1705,7 @@ int main(int argc, char *argv[])
                 char remote_cmd[512];
                 // 发送 mr-fault-local 指令
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s mr-fault-local %s'",
+                         "ssh root@%s \"%s mr-fault-local %s\"",
                          SLAVE_HOSTS[i], REMOTE_TOOL_PATH, task_type);
 
                 printf("[Master] 正在 %s 上寻找并杀死 %s 任务...\n", target_input, task_type);
@@ -1755,7 +1757,7 @@ int main(int argc, char *argv[])
                 is_remote = 1;
                 char remote_cmd[512];
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s io-slow-local %d'", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, is_on);
+                         "ssh root@%s \"%s io-slow-local %d\"", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, is_on);
                 printf("[Master] %s 磁盘 I/O 限速...\n", is_on ? "开启" : "关闭");
                 system(remote_cmd);
                 break;
@@ -1797,7 +1799,7 @@ int main(int argc, char *argv[])
             {
                 char remote_cmd[512];
                 snprintf(remote_cmd, sizeof(remote_cmd),
-                         "ssh root@%s '%s yarn-unhealthy-local %d'", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, type);
+                         "ssh root@%s \"%s yarn-unhealthy-local %d\"", SLAVE_HOSTS[i], REMOTE_TOOL_PATH, type);
                 printf("[Master] 设置 %s YARN 节点状态...\n", input_target);
                 system(remote_cmd);
                 break;

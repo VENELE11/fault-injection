@@ -4,8 +4,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>故障注入控制器</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260415a" />
 </head>
 
 <body>
@@ -14,7 +19,7 @@
       <div class="hero-left">
         <div class="badge">Fault Injection Platform</div>
         <h1>故障注入控制器</h1>
-        <p class="hero-sub">面向 Hadoop 集群的统一控制与故障注入平台（中文界面）。</p>
+        <p class="hero-sub">面向 Hadoop / CloudStack 集群的统一故障注入与功能测试平台。</p>
       </div>
       <div class="hero-right">
         <div class="pill" id="health">连接中...</div>
@@ -26,7 +31,7 @@
       <div class="panel-head">
         <div>
           <h2>集群概览</h2>
-          <p>当前控制器与节点连接信息（master 可免密 SSH 到 slave）。</p>
+          <p>当前控制器与节点连接信息。</p>
         </div>
         <div class="panel-meta" id="outputLimit">输出限制: --</div>
       </div>
@@ -37,27 +42,13 @@
       <div class="panel-head">
         <div>
           <h2>功能面板</h2>
-          <p>已集成全部 Hadoop 注入功能，按模块分类展示。</p>
+          <p>全部注入功能，自动执行前后对比与数据分析。</p>
         </div>
         <div class="panel-actions">
           <button class="primary" id="recoverAll">一键恢复</button>
         </div>
       </div>
       <div id="actionsContainer" class="action-sections"></div>
-    </section>
-
-    <section class="panel" id="testPanel">
-      <div class="panel-head">
-        <div>
-          <h2>功能测试</h2>
-          <p>逐项运行功能测试，查看操作前后的对比结果。</p>
-        </div>
-        <div class="panel-actions">
-          <a href="/test" class="primary"
-            style="display:inline-block;text-decoration:none;padding:8px 20px;border-radius:10px;font-weight:600;font-size:14px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;">进入测试页
-            →</a>
-        </div>
-      </div>
     </section>
 
     <section class="panel">
@@ -76,7 +67,7 @@
 
   <datalist id="nodeList"></datalist>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260415a"></script>
 </body>
 
 </html>

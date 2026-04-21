@@ -45,7 +45,9 @@ typedef enum
     FAULT_PLUS_2,
     FAULT_PLUS_3,
     FAULT_PLUS_4,
-    FAULT_PLUS_5
+    FAULT_PLUS_5,
+    FAULT_ZERO_ALL,
+    FAULT_INVALID_PC
 } FaultType;
 
 // 全局变量 (用于信号处理)
@@ -68,6 +70,28 @@ void sigint_handler(int sig)
 // 辅助函数
 int rand_bit() { return rand() % 64; }
 uint64_t my_rand() { return (uint64_t)rand(); }
+
+static uint64_t bit_mask(int bit)
+{
+    if (bit < 0 || bit > 63)
+        return 0;
+    return UINT64_C(1) << bit;
+}
+
+static int pick_bit_with_value(uint64_t value, int want_one)
+{
+    int candidates[64];
+    int count = 0;
+    for (int i = 0; i < 64; i++)
+    {
+        int is_one = (value & bit_mask(i)) != 0;
+        if (is_one == want_one)
+            candidates[count++] = i;
+    }
+    if (count == 0)
+        return -1;
+    return candidates[rand() % count];
+}
 
 // 信号处理：定时器到期后暂停目标进程
 void alarm_handler(int sig)
@@ -99,28 +123,42 @@ uint64_t apply_fault(uint64_t original, FaultType type, int user_specified_bit)
     int bit2 = rand_bit();
     uint64_t mask_low_8 = 0xFFFFFFFFFFFFFF00;
 
+    if (bit1 < 0 || bit1 > 63)
+    {
+        printf("[错误] bit 必须在 0..63 之间，当前: %d\n", bit1);
+        return original;
+    }
+
     switch (type)
     {
     case FAULT_1_BIT_FLIP:
-        corrupted ^= (1UL << bit1);
+        corrupted ^= bit_mask(bit1);
         break;
     case FAULT_2_BIT_FLIP:
-        corrupted ^= (1UL << bit1);
-        corrupted ^= (1UL << bit2);
+        if (bit2 == bit1)
+            bit2 = (bit1 + 1) % 64;
+        corrupted ^= bit_mask(bit1);
+        corrupted ^= bit_mask(bit2);
         break;
     case FAULT_1_BIT_0:
-        corrupted &= ~(1UL << bit1);
+        if (user_specified_bit < 0)
+            bit1 = pick_bit_with_value(original, 1);
+        if (bit1 >= 0)
+            corrupted &= ~bit_mask(bit1);
         break;
     case FAULT_2_BIT_0:
-        corrupted &= ~(1UL << bit1);
-        corrupted &= ~(1UL << bit2);
+        corrupted &= ~bit_mask(bit1);
+        corrupted &= ~bit_mask(bit2);
         break;
     case FAULT_1_BIT_1:
-        corrupted |= (1UL << bit1);
+        if (user_specified_bit < 0)
+            bit1 = pick_bit_with_value(original, 0);
+        if (bit1 >= 0)
+            corrupted |= bit_mask(bit1);
         break;
     case FAULT_2_BIT_1:
-        corrupted |= (1UL << bit1);
-        corrupted |= (1UL << bit2);
+        corrupted |= bit_mask(bit1);
+        corrupted |= bit_mask(bit2);
         break;
     case FAULT_8_LOW_0:
         corrupted &= mask_low_8;
@@ -146,6 +184,12 @@ uint64_t apply_fault(uint64_t original, FaultType type, int user_specified_bit)
     case FAULT_PLUS_5:
         corrupted += 5;
         break;
+    case FAULT_ZERO_ALL:
+        corrupted = 0;
+        break;
+    case FAULT_INVALID_PC:
+        corrupted = UINT64_C(0xffffffffffffffff);
+        break;
     default:
         break;
     }
@@ -164,6 +208,8 @@ int main(int argc, char *argv[])
         printf("  -i <interval>   循环间隔 (毫秒, 默认50)\n");
         printf("示例:\n");
         printf("  %s 1234 X0 flip1 -1         # 单次注入\n", argv[0]);
+        printf("  %s 1234 X0 zeroall          # 将寄存器整体置零\n", argv[0]);
+        printf("  %s 1234 PC invalidpc        # 将PC置为无效地址\n", argv[0]);
         printf("  %s 1234 X0 flip1 -1 -l 100  # 循环100次\n", argv[0]);
         printf("  %s 1234 X0 add1 -1 -l 0     # 无限循环直到Ctrl+C\n", argv[0]);
         return 1;
@@ -232,6 +278,10 @@ int main(int argc, char *argv[])
         type = FAULT_PLUS_4;
     else if (strcmp(type_str, "add5") == 0)
         type = FAULT_PLUS_5;
+    else if (strcmp(type_str, "zeroall") == 0)
+        type = FAULT_ZERO_ALL;
+    else if (strcmp(type_str, "invalidpc") == 0)
+        type = FAULT_INVALID_PC;
 
     printf("=== ARM64 寄存器注入器 (PID: %d) ===\n", pid);
 
@@ -332,6 +382,12 @@ int main(int argc, char *argv[])
         // 5. 应用故障
         uint64_t old_val = *target_ptr;
         uint64_t new_val = apply_fault(old_val, type, bit);
+        if (new_val == old_val)
+        {
+            printf("[失败] %s 注入后数值未变化: 0x%lx。请换 bit 或故障类型后重试。\n", reg_name, old_val);
+            ptrace(PTRACE_DETACH, pid, NULL, NULL);
+            return 2;
+        }
         *target_ptr = new_val;
 
         injection_count++;

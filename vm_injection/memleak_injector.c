@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // 2. 关键步骤：写入数据 (Page Fault) 强制分配物理内存
+        // 2. 写入数据 (Page Fault) 强制分配物理内存
         memset(ptr, 0xAA, chunk_size);
 
         current_bytes += chunk_size;

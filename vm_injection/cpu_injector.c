@@ -22,7 +22,7 @@
 // 全局标志位，控制线程运行
 volatile int keep_running = 1;
 
-// 压力测试线程函数 - 增强版
+// 压力测试线程函数
 // 混合整数、浮点、内存访问，最大化 CPU 占用
 void *stress_worker(void *arg)
 {

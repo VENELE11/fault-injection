@@ -1,5 +1,5 @@
 /*
- * cloudstack_injector.c - CloudStack云平台故障注入工具 (增强版)
+ * cloudstack_injector.c - CloudStack云平台故障注入工具
  *
  * 功能：针对CloudStack云计算平台进行多层次故障注入
  * 支持：
@@ -777,7 +777,7 @@ int inject_vm_operation_fault(int op_type, const char *target)
 void print_cs_usage(const char *prog)
 {
     printf("\n╔═══════════════════════════════════════════════════════════════════╗\n");
-    printf("║        CloudStack故障注入工具 v2.0 (增强版)                       ║\n");
+    printf("║        CloudStack故障注入工具 v2.0                      ║\n");
     printf("║                     ║\n");
     printf("╚═══════════════════════════════════════════════════════════════════╝\n\n");
     printf("用法: %s <命令> [参数]\n\n", prog);

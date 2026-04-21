@@ -75,6 +75,11 @@ GROUPS = [
         "title": "KVM 注入",
         "desc": "KVM 虚拟化层软错误、性能故障与 CPU 热插拔。",
     },
+    {
+        "key": "cloudstack",
+        "title": "CloudStack 注入",
+        "desc": "CloudStack 服务管理与故障注入。",
+    },
 ]
 
 
@@ -498,6 +503,7 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
     injector = cfg.get("hadoop", {}).get("injector", "")
     vm_cfg = cfg.get("vm", {})
     kvm_cfg = cfg.get("kvm", {})
+    cs_cfg = cfg.get("cloudstack", {})
     vm_base_dir = vm_cfg.get("base_dir", "")
     kvm_base_dir = kvm_cfg.get("base_dir", "")
 
@@ -514,6 +520,7 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "vm_mem_injector": vm_cfg.get("mem_injector", ""),
         "vm_reg_injector": vm_cfg.get("reg_injector", ""),
         "kvm_injector": kvm_cfg.get("injector", ""),
+        "cloudstack_injector": cs_cfg.get("injector", ""),
     }
 
 
@@ -527,6 +534,8 @@ def resolve_sudo(cfg: Dict[str, Any], spec: Dict[str, Any]) -> bool:
         return bool(cfg.get("vm", {}).get("use_sudo", False))
     if sudo_key == "kvm":
         return bool(cfg.get("kvm", {}).get("use_sudo", False))
+    if sudo_key == "cloudstack":
+        return bool(cfg.get("cloudstack", {}).get("use_sudo", False))
     return bool(cfg.get("hadoop", {}).get("use_sudo", False))
 
 
@@ -559,6 +568,7 @@ PARAM_ENUMS = {
     "soft_type": {"flip", "swap", "zero"},
     "guest_type": {"data", "divzero", "invalid"},
     "cpu_state": {"online", "offline"},
+    "cs_component": {"ms", "agent", "usage", "mysql"},
 }
 
 NUM_RANGES = {
@@ -589,7 +599,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "cluster",
         "scope": "all",
         "params": [],
-        "cmds": lambda ctx, params: [["jps"]],
+        "cmds": lambda ctx, params: [["/bin/sh", "-lc", "jps 2>/dev/null || true"]],
         "sudo": False,
     },
     "hadoop_start": {
@@ -599,13 +609,8 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "scope": "master",
         "params": [],
         "cmds": lambda ctx, params: [
-            ["/bin/sh", "-lc", "source /etc/profile; hdfs --daemon start namenode"],
-            ["/bin/sh", "-lc", "source /etc/profile; hdfs --daemon start secondarynamenode"],
-            ["ssh", "slave1", "source /etc/profile; hdfs --daemon start datanode"],
-            ["ssh", "slave2", "source /etc/profile; hdfs --daemon start datanode"],
-            ["/bin/sh", "-lc", "source /etc/profile; yarn --daemon start resourcemanager"],
-            ["ssh", "slave1", "source /etc/profile; yarn --daemon start nodemanager"],
-            ["ssh", "slave2", "source /etc/profile; yarn --daemon start nodemanager"],
+            ["/bin/sh", "-lc", f". /etc/profile >/dev/null 2>&1; test -x {ctx['hadoop_sbin']}/start-dfs.sh; test -x {ctx['hadoop_sbin']}/start-yarn.sh; {ctx['hadoop_sbin']}/start-dfs.sh >/tmp/fi_start_dfs.log 2>&1; {ctx['hadoop_sbin']}/start-yarn.sh >/tmp/fi_start_yarn.log 2>&1"],
+            ["/bin/sh", "-lc", "jps 2>/dev/null | grep -q NameNode && jps 2>/dev/null | grep -q SecondaryNameNode && jps 2>/dev/null | grep -q ResourceManager && for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q DataNode\" || exit 1; done && for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q NodeManager\" || exit 1; done"],
         ],
     },
     "hadoop_stop": {
@@ -626,16 +631,11 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "scope": "master",
         "params": [],
         "cmds": lambda ctx, params: [
-            [f"{ctx['hadoop_sbin']}/stop-yarn.sh"],
-            [f"{ctx['hadoop_sbin']}/stop-dfs.sh"],
+            ["/bin/sh", "-lc", f"{ctx['hadoop_sbin']}/stop-yarn.sh >/tmp/fi_stop_yarn.log 2>&1 || true"],
+            ["/bin/sh", "-lc", f"{ctx['hadoop_sbin']}/stop-dfs.sh >/tmp/fi_stop_dfs.log 2>&1 || true"],
             ["/bin/sleep", "3"],
-            ["/bin/sh", "-lc", "source /etc/profile; hdfs --daemon start namenode"],
-            ["/bin/sh", "-lc", "source /etc/profile; hdfs --daemon start secondarynamenode"],
-            ["ssh", "slave1", "source /etc/profile; hdfs --daemon start datanode"],
-            ["ssh", "slave2", "source /etc/profile; hdfs --daemon start datanode"],
-            ["/bin/sh", "-lc", "source /etc/profile; yarn --daemon start resourcemanager"],
-            ["ssh", "slave1", "source /etc/profile; yarn --daemon start nodemanager"],
-            ["ssh", "slave2", "source /etc/profile; yarn --daemon start nodemanager"],
+            ["/bin/sh", "-lc", f". /etc/profile >/dev/null 2>&1; test -x {ctx['hadoop_sbin']}/start-dfs.sh; test -x {ctx['hadoop_sbin']}/start-yarn.sh; {ctx['hadoop_sbin']}/start-dfs.sh >/tmp/fi_start_dfs.log 2>&1; {ctx['hadoop_sbin']}/start-yarn.sh >/tmp/fi_start_yarn.log 2>&1"],
+            ["/bin/sh", "-lc", "jps 2>/dev/null | grep -q NameNode && jps 2>/dev/null | grep -q SecondaryNameNode && jps 2>/dev/null | grep -q ResourceManager && for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q DataNode\" || exit 1; done && for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q NodeManager\" || exit 1; done"],
         ],
     },
     "inject_list": {
@@ -853,6 +853,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "desc": "在目标节点生成大文件占满磁盘空间。",
         "group": "resource",
         "scope": "master",
+        "timeout": 180,
         "params": [
             {"name": "target", "label": "目标节点", "type": "node", "required": True},
             {"name": "size_mb", "label": "大小 (MB)", "type": "number", "default": 512, "required": True},
@@ -1352,6 +1353,122 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "tool": "kvm_injector",
         "sudo": "kvm",
     },
+    "process_restart": {
+        "title": "进程重启",
+        "desc": "重启指定 Hadoop 组件守护进程。",
+        "group": "process",
+        "scope": "master",
+        "params": [
+            {
+                "name": "component",
+                "label": "组件",
+                "type": "select",
+                "options": [
+                    {"value": "nn", "label": "NameNode (nn)"},
+                    {"value": "dn", "label": "DataNode (dn)"},
+                    {"value": "rm", "label": "ResourceManager (rm)"},
+                    {"value": "nm", "label": "NodeManager (nm)"},
+                    {"value": "snn", "label": "SecondaryNameNode (snn)"},
+                ],
+                "default": "nn",
+                "required": True,
+            },
+        ],
+        "cmds": lambda ctx, params: _build_process_restart_cmds(ctx, params),
+    },
+    "cloudstack_list": {
+        "title": "CloudStack 服务状态",
+        "desc": "查看 CloudStack 服务与关键端口状态。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], "list"]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+    },
+    "cloudstack_process": {
+        "title": "CloudStack 进程控制",
+        "desc": "挂起/恢复 CloudStack 核心组件进程。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [
+            {
+                "name": "cs_component",
+                "label": "组件",
+                "type": "select",
+                "options": [
+                    {"value": "ms", "label": "Management Server"},
+                    {"value": "agent", "label": "CloudStack Agent"},
+                    {"value": "usage", "label": "Usage Server"},
+                    {"value": "mysql", "label": "MySQL"},
+                ],
+                "default": "agent",
+                "required": True,
+            },
+            {
+                "name": "op",
+                "label": "操作",
+                "type": "select",
+                "options": [
+                    {"value": "hang", "label": "挂起 (hang)"},
+                    {"value": "resume", "label": "恢复 (resume)"},
+                    {"value": "crash", "label": "崩溃 (crash)"},
+                ],
+                "default": "hang",
+                "required": True,
+            },
+        ],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], params["op"], params["cs_component"]]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+        "danger": True,
+    },
+    "cloudstack_api_delay": {
+        "title": "CloudStack API 延迟",
+        "desc": "注入 CloudStack API 延迟。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [
+            {"name": "ms", "label": "延迟 (ms)", "type": "number", "default": 1000, "required": True},
+        ],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], "api-delay", str(params["ms"])]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+        "danger": True,
+    },
+    "cloudstack_api_delay_clear": {
+        "title": "清理 API 延迟",
+        "desc": "清理 CloudStack API 延迟规则。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], "api-delay-clear"]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+    },
+    "cloudstack_network": {
+        "title": "CloudStack 网络隔离",
+        "desc": "隔离指定节点的网络连接。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [
+            {"name": "target", "label": "目标节点/IP", "type": "node", "required": True},
+        ],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], "isolate", params["target"]]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+        "danger": True,
+    },
+    "cloudstack_network_clear": {
+        "title": "清理网络隔离",
+        "desc": "清理 CloudStack 网络隔离规则。",
+        "group": "cloudstack",
+        "scope": "master",
+        "params": [],
+        "cmds": lambda ctx, params: [[ctx["cloudstack_injector"], "isolate-clear"]],
+        "tool": "cloudstack_injector",
+        "sudo": "cloudstack",
+    },
 }
 
 
@@ -1406,14 +1523,25 @@ def _build_kvm_soft_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[Lis
     return [cmd]
 
 
+def _build_process_restart_cmds(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    component = params.get("component", "")
+    cmd_map = {
+        "nn": ["/bin/sh", "-lc", ". /etc/profile >/dev/null 2>&1; hdfs --daemon start namenode >/tmp/fi_restart_nn.log 2>&1; jps 2>/dev/null | grep -q NameNode"],
+        # 对 slave 组件使用 Hadoop 分发脚本，避免依赖硬编码 slave1/slave2 主机名
+        "dn": ["/bin/sh", "-lc", f". /etc/profile >/dev/null 2>&1; test -x {ctx['hadoop_sbin']}/start-dfs.sh; {ctx['hadoop_sbin']}/start-dfs.sh >/tmp/fi_restart_dn.log 2>&1; for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q DataNode\" || exit 1; done"],
+        "rm": ["/bin/sh", "-lc", ". /etc/profile >/dev/null 2>&1; yarn --daemon start resourcemanager >/tmp/fi_restart_rm.log 2>&1; jps 2>/dev/null | grep -q ResourceManager"],
+        "nm": ["/bin/sh", "-lc", f". /etc/profile >/dev/null 2>&1; test -x {ctx['hadoop_sbin']}/start-yarn.sh; {ctx['hadoop_sbin']}/start-yarn.sh >/tmp/fi_restart_nm.log 2>&1; for n in slave1 slave2; do ssh -o StrictHostKeyChecking=no \"$n\" \"jps 2>/dev/null | grep -q NodeManager\" || exit 1; done"],
+        "snn": ["/bin/sh", "-lc", ". /etc/profile >/dev/null 2>&1; hdfs --daemon start secondarynamenode >/tmp/fi_restart_snn.log 2>&1; jps 2>/dev/null | grep -q SecondaryNameNode"],
+    }
+    cmd = cmd_map.get(component)
+    if cmd:
+        return [cmd]
+    return [["/bin/echo", f"Unknown component: {component}"]]
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(static_dir / "index.html")
-
-
-@app.get("/test")
-def test_page() -> FileResponse:
-    return FileResponse(static_dir / "test.html")
 
 
 # ---------------------------------------------------------------------------
@@ -1457,6 +1585,13 @@ def _run_check_cmds(
         title = check.get("title", "检查")
         cmd_tpl = check.get("cmd", "")
         scope = check.get("scope", "master")
+        check_timeout = check.get("timeout", 15)
+        try:
+            check_timeout = int(check_timeout)
+        except (TypeError, ValueError):
+            check_timeout = 15
+        if check_timeout <= 0:
+            check_timeout = 15
 
         # Render template variables into the command
         check_ctx = dict(ctx)
@@ -1477,7 +1612,7 @@ def _run_check_cmds(
         node_results = []
         for node in nodes:
             cmd = ["/bin/sh", "-lc", rendered]
-            res = run_on_node(cfg, node, cmd, timeout_override=15)
+            res = run_on_node(cfg, node, cmd, timeout_override=check_timeout)
             res.update({"node": node.get("name"), "host": node.get("host")})
             node_results.append(res)
 
@@ -1485,6 +1620,7 @@ def _run_check_cmds(
             "title": title,
             "cmd": rendered,
             "scope": scope,
+            "timeout": check_timeout,
             "results": node_results,
             "ok": all(r.get("ok") for r in node_results) if node_results else True,
         })
@@ -1530,7 +1666,8 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
                 if required and (name not in action_params or action_params[name] in (None, "")):
                     raise HTTPException(status_code=400, detail=f"缺少测试参数: {name}")
 
-            scope = spec.get("scope", "master")
+            # Scenario can override action scope to keep action/verify on the same target.
+            scope = scenario.get("action_scope", spec.get("scope", "master"))
             if scope == "all":
                 nodes = get_nodes(cfg)
             elif scope == "local":
@@ -1540,7 +1677,7 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
 
             use_sudo = resolve_sudo(cfg, spec)
             action_results = []
-            action_timeout = spec.get("timeout")
+            action_timeout = scenario.get("action_timeout", spec.get("timeout"))
             for node in nodes:
                 cmds = spec["cmds"](ctx, action_params)
                 for cmd in cmds:
@@ -1582,6 +1719,55 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
         "cleanup_action": scenario.get("cleanup"),
         "cleanup_params": scenario.get("cleanup_params", scenario.get("cleanup_params_override", {})),
     })
+
+
+@app.post("/api/functest/cleanup")
+def api_functest_cleanup(req: FuncTestRequest) -> JSONResponse:
+    """Run cleanup action for one functional test scenario."""
+    test_key = req.key
+    user_params = req.params or {}
+
+    if test_key not in FUNC_TESTS_MAP:
+        raise HTTPException(status_code=400, detail=f"未知测试: {test_key}")
+
+    scenario = FUNC_TESTS_MAP[test_key]
+    cleanup_action = scenario.get("cleanup")
+    if not cleanup_action:
+        return JSONResponse(
+            {
+                "ok": False,
+                "key": test_key,
+                "cleanup_action": None,
+                "results": [],
+                "error": "该测试没有清理动作",
+            }
+        )
+
+    # Start from action params + user inputs, then force cleanup-specific params.
+    action_params = dict(scenario.get("action_params", {}))
+    action_params.update(user_params)
+    cleanup_params = dict(action_params)
+    cleanup_defaults = scenario.get("cleanup_params", scenario.get("cleanup_params_override", {})) or {}
+    cleanup_params.update(cleanup_defaults)
+
+    action_resp = api_action(
+        ActionRequest(
+            action=cleanup_action,
+            params=cleanup_params,
+            tests={"kvm": False},
+        )
+    )
+    payload = json.loads(action_resp.body.decode("utf-8"))
+
+    return JSONResponse(
+        {
+            "ok": bool(payload.get("ok")),
+            "key": test_key,
+            "cleanup_action": cleanup_action,
+            "results": payload.get("results", []),
+            "error": payload.get("error"),
+        }
+    )
 
 
 @app.on_event("startup")

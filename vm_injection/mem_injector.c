@@ -124,7 +124,7 @@ unsigned long find_region_address_blind(pid_t pid, TargetRegion region)
         }
         else if (region == REGION_CODE && perms[2] == 'x')
         {
-            found_addr = start + 0x100;
+            found_addr = start + 0x100;// 盲猜：代码段起始 + 偏移
             break;
         }
     }
@@ -138,7 +138,7 @@ unsigned long find_region_address_blind(pid_t pid, TargetRegion region)
     return found_addr;
 }
 
-// [新功能] 扫描内存寻找特征值
+// 扫描内存寻找特征值
 // 改进版：扫描所有可读写的内存区域（包括匿名 mmap）
 unsigned long scan_memory_for_pattern(pid_t pid, TargetRegion region, unsigned long signature)
 {
@@ -343,9 +343,7 @@ int main(int argc, char *argv[])
     printf("=== 高级内存故障注入器 (Scanner Enabled) ===\n");
     printf("[*] 目标 PID: %d\n", ctx.pid);
 
-    // ==========================================
-    // 关键修改：Attach 必须移到地址计算之前！
-    // ==========================================
+
     // 无论是读取地址内容进行校验，还是扫描内存寻找特征值，
     // 都需要 PTRACE_PEEKDATA，这要求必须先 Attach 目标进程。
     printf("[*] 正在挂起目标进程 (Attach)...\n");
@@ -363,7 +361,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        // 盲猜模式 (旧逻辑)
+        // 盲猜模式 
         printf("[!] 警告：使用盲猜模式 (建议使用 -s 特征扫描)\n");
         printf("[*] 正在解析内存布局盲猜注入点...\n");
         ctx.addr = find_region_address_blind(ctx.pid, ctx.region);

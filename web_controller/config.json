@@ -28,9 +28,14 @@
     }
   ],
   "hadoop": {
-    "home": "/opt/hadoop",
+    "home": "/root/hadoop",
     "injector": "/root/hadoop-fi/hadoop_injector",
     "use_sudo": false
+  },
+  "cloudstack": {
+    "base_dir": "/home/venele/grad_project/kvm_injection/cloudstack-fi",
+    "injector": "/home/venele/grad_project/kvm_injection/cloudstack-fi/cloudstack_injector",
+    "use_sudo": true
   },
   "vm": {
     "base_dir": "/home/venele/grad_project/vm_injection",
@@ -86,6 +91,14 @@
           "scope": "master",
           "timeout": 6,
           "cmd": ". /etc/profile >/dev/null 2>&1; {hadoop_home}/bin/yarn node -list | head -n 5"
+        }
+      ],
+      "cloudstack": [
+        {
+          "title": "CloudStack 服务状态",
+          "scope": "master",
+          "timeout": 6,
+          "cmd": "{cloudstack_injector} list"
         }
       ],
       "vm": [],

@@ -23,7 +23,7 @@ void get_interface_name(char *buffer, size_t size)
     pclose(fp);
 }
 
-void inject_network(int type, const char *param)
+int inject_network(int type, const char *param)
 {
     char nic[32];
     get_interface_name(nic, sizeof(nic));
@@ -39,7 +39,12 @@ void inject_network(int type, const char *param)
     if (type == 0)
     {
         printf(" 网络故障已清理，网卡 %s 恢复正常\n", nic);
-        return;
+        return 0;
+    }
+    if (param == NULL || strlen(param) == 0)
+    {
+        printf(" 网络故障参数不能为空\n");
+        return 1;
     }
     // 注入新故障
     if (type == 1)
@@ -62,11 +67,19 @@ void inject_network(int type, const char *param)
         sprintf(cmd, "tc qdisc add dev %s root netem corrupt %s", nic, param);
         printf(" [Corrupt] 已注入报文损坏率: %s (设备: %s)\n", param, nic);
     }
+    else
+    {
+        printf(" 未知网络故障类型: %d\n", type);
+        return 1;
+    }
 
     // 执行命令
     int ret = system(cmd);
-    if (ret != 0)
+    if (ret != 0) {
         printf("  警告: 网络命令执行返回异常 (Code: %d)\n", ret);
+        return 1;
+    }
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -78,6 +91,5 @@ int main(int argc, char *argv[])
     }
     int type = atoi(argv[1]);
     const char *param = (argc >= 3) ? argv[2] : NULL;
-    inject_network(type, param);
-    return 0;
+    return inject_network(type, param);
 }

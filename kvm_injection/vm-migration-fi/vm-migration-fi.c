@@ -11,7 +11,6 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("ARM-FI-Team");
 
 #define PROC_DIR "vm-migration-fi"
-/* 修改目标为 kvm_vm_ioctl，因为它必定存在 */
 #define TARGET_FUNC "kvm_vm_ioctl"
 
 static int inject_signal = 0;

@@ -18,6 +18,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi.responses import JSONResponse
 
 # Ensure the web_controller package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -29,7 +30,11 @@ from web_controller.app import (
     PARAM_ENUMS,
     ActionRequest,
     _SafeFormat,
+    _build_hadoop_daemon_cmd,
+    _build_hadoop_restart_plan,
+    _build_hadoop_start_plan,
     _build_kvm_soft_cmd,
+    _build_process_restart_plan,
     _build_vm_mem_inject_cmd,
     _build_vm_reg_inject_cmd,
     build_context,
@@ -37,6 +42,7 @@ from web_controller.app import (
     find_node_by_value,
     get_master_node,
     get_nodes,
+    get_worker_nodes,
     is_local_node,
     maybe_sudo,
     normalize_cmds,
@@ -210,6 +216,14 @@ class TestGetMasterNode:
         cfg = {"nodes": [{"name": "slave1", "host": "10.0.0.1", "role": "slave"}]}
         with pytest.raises(RuntimeError, match="Master node not found"):
             get_master_node(cfg)
+
+
+class TestGetWorkerNodes:
+    """get_worker_nodes: 过滤出非 master 节点。"""
+
+    def test_returns_only_slaves(self, mock_config):
+        workers = get_worker_nodes(mock_config)
+        assert [node["name"] for node in workers] == ["slave1", "slave2"]
 
 
 class TestIsLocalNode:
@@ -454,6 +468,10 @@ class TestBuildContext:
         ctx = build_context(mock_config)
         assert ctx["hadoop_home"] == "/opt/hadoop"
 
+    def test_has_hadoop_bin(self, mock_config):
+        ctx = build_context(mock_config)
+        assert ctx["hadoop_bin"] == "/opt/hadoop/bin"
+
     def test_has_injector(self, mock_config):
         ctx = build_context(mock_config)
         assert ctx["injector"] == "/usr/local/bin/hadoop_injector"
@@ -551,6 +569,40 @@ class TestBuildVmMemInjectCmd:
         assert "deadbeef" in cmds[0]
 
 
+class TestHadoopActionPlans:
+    """Hadoop 启停/恢复计划应按节点守护进程执行。"""
+
+    def test_build_hadoop_daemon_cmd_uses_direct_daemon(self):
+        ctx = {"hadoop_bin": "/opt/hadoop/bin"}
+        cmd = _build_hadoop_daemon_cmd(ctx, "hdfs", "datanode", "start", "dn.log", "DataNode")
+        assert cmd[:2] == ["/bin/sh", "-lc"]
+        assert "/opt/hadoop/bin/hdfs --daemon start datanode" in cmd[2]
+        assert "start-dfs.sh" not in cmd[2]
+
+    def test_build_hadoop_start_plan_covers_master_and_workers(self, mock_config):
+        ctx = build_context(mock_config)
+        plan = _build_hadoop_start_plan(mock_config, ctx)
+        assert len(plan) == 7
+        assert [step["node"]["name"] for step in plan[:3]] == ["master", "master", "slave1"]
+        assert any("--daemon start namenode" in step["cmd"][2] for step in plan)
+        assert any("--daemon start datanode" in step["cmd"][2] for step in plan)
+        assert any("--daemon start nodemanager" in step["cmd"][2] for step in plan)
+
+    def test_build_hadoop_restart_plan_stops_then_starts(self, mock_config):
+        ctx = build_context(mock_config)
+        plan = _build_hadoop_restart_plan(mock_config, ctx)
+        rendered = [step["cmd"][2] for step in plan if len(step["cmd"]) > 2]
+        assert any("--daemon stop nodemanager" in cmd for cmd in rendered)
+        assert any("--daemon stop namenode" in cmd for cmd in rendered)
+        assert any("--daemon start namenode" in cmd for cmd in rendered)
+
+    def test_build_process_restart_plan_for_datanode_targets_workers(self, mock_config):
+        ctx = build_context(mock_config)
+        plan = _build_process_restart_plan(mock_config, ctx, "dn")
+        assert [step["node"]["name"] for step in plan] == ["slave1", "slave2"]
+        assert all("--daemon start datanode" in step["cmd"][2] for step in plan)
+
+
 class TestBuildVmRegInjectCmd:
     """_build_vm_reg_inject_cmd: VM 寄存器注入命令构建。"""
 
@@ -581,14 +633,15 @@ class TestBuildKvmSoftCmd:
 
     def test_soft_flip(self):
         ctx = {"kvm_injector": "/tmp/kvm_inj"}
-        params = {"soft_type": "flip", "pid": 42, "reg": "PC", "soft_bit": 7}
+        params = {"soft_type": "flip", "target": "master", "reg": "PC", "soft_bit": 7}
         cmds = _build_kvm_soft_cmd(ctx, params)
         assert "soft-flip" in cmds[0]
         assert "7" in cmds[0]
+        assert "master" in cmds[0]
 
     def test_soft_swap_no_bit(self):
         ctx = {"kvm_injector": "/tmp/kvm_inj"}
-        params = {"soft_type": "swap", "pid": 42, "reg": "X1"}
+        params = {"soft_type": "swap", "target": "slave1", "reg": "X1"}
         cmds = _build_kvm_soft_cmd(ctx, params)
         assert "soft-swap" in cmds[0]
         # swap does not take bit arg
@@ -596,7 +649,7 @@ class TestBuildKvmSoftCmd:
 
     def test_soft_zero_with_bit(self):
         ctx = {"kvm_injector": "/tmp/kvm_inj"}
-        params = {"soft_type": "zero", "pid": 42, "reg": "SP", "soft_bit": 0}
+        params = {"soft_type": "zero", "target": "slave2", "reg": "SP", "soft_bit": 0}
         cmds = _build_kvm_soft_cmd(ctx, params)
         assert "soft-zero" in cmds[0]
         assert "0" in cmds[0]
@@ -713,6 +766,60 @@ class TestApiActionExecution:
         assert "results" in data
         assert isinstance(data["results"], list)
         assert "action" in data and data["action"] == "cluster_status"
+
+
+class TestApiFunctestCleanup:
+    """POST /api/functest/cleanup: 功能测试清理接口。"""
+
+    def test_unknown_test_returns_400(self, client):
+        resp = client.post("/api/functest/cleanup", json={"key": "__missing__", "params": {}})
+        assert resp.status_code == 400
+
+    def test_cleanup_runs_configured_action(self, client):
+        with patch("web_controller.app.api_action") as mock_api_action:
+            mock_api_action.return_value = JSONResponse(
+                {
+                    "ok": True,
+                    "action": "vm_network",
+                    "results": [{"ok": True, "node": "local"}],
+                }
+            )
+
+            resp = client.post(
+                "/api/functest/cleanup",
+                json={"key": "test_delay", "params": {"net_param": "300ms"}},
+            )
+
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["ok"] is True
+            assert data["cleanup_action"] == "vm_network"
+            assert isinstance(data["results"], list)
+
+            req_obj = mock_api_action.call_args[0][0]
+            assert req_obj.action == "vm_network"
+            assert req_obj.params["net_type"] == "clear"
+
+    def test_cleanup_param_override_keeps_runtime_params(self, client):
+        with patch("web_controller.app.api_action") as mock_api_action:
+            mock_api_action.return_value = JSONResponse(
+                {
+                    "ok": True,
+                    "action": "process_fault",
+                    "results": [{"ok": True, "node": "master"}],
+                }
+            )
+
+            resp = client.post(
+                "/api/functest/cleanup",
+                json={"key": "test_process_hang_resume", "params": {"component": "nn"}},
+            )
+
+            assert resp.status_code == 200
+            req_obj = mock_api_action.call_args[0][0]
+            assert req_obj.action == "process_fault"
+            assert req_obj.params["component"] == "nn"
+            assert req_obj.params["op"] == "resume"
 
 
 # ====================================================================
