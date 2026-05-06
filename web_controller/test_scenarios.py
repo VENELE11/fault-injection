@@ -937,5 +937,256 @@ FUNC_TESTS: List[Dict[str, Any]] = [
     },
 ]
 
+# Keep the VM/KVM scenarios from the previous platform version, but replace
+# Hadoop/CloudStack scenarios with Kubernetes + Chaos Mesh experiments.
+LEGACY_FUNC_TESTS = FUNC_TESTS
+
+K8S_TARGET_PODS_CMD = (
+    "pods=\"$({kubectl} get pods -n {namespace} -l {label_key}={label_value} -o name 2>&1)\"; "
+    "rc=$?; "
+    "if [ \"$rc\" -ne 0 ]; then echo \"$pods\"; exit \"$rc\"; fi; "
+    "if ! printf '%s\\n' \"$pods\" | grep -q '^pod/'; then "
+    "echo '未找到目标 Pod: namespace={namespace}, selector={label_key}={label_value}'; "
+    "[ -n \"$pods\" ] && echo \"$pods\"; "
+    "exit 1; "
+    "fi; "
+    "{kubectl} get pods -n {namespace} -l {label_key}={label_value} -o wide"
+)
+
+K8S_PREPARE_TARGET_CMD = (
+    "{kubectl} create deployment {label_value} "
+    "-n {namespace} "
+    "--image={k8s_demo_image} "
+    "--replicas={k8s_demo_replicas} "
+    "--dry-run=client -o yaml | {kubectl} apply -f -; "
+    "{kubectl} rollout status deployment/{label_value} -n {namespace} --timeout=180s; "
+    "{kubectl} get pods -n {namespace} -l {label_key}={label_value} -o wide"
+)
+
+K8S_HTTP_PROBE_CMD = (
+    "{kubectl} expose deployment {label_value} "
+    "-n {namespace} "
+    "--port=80 "
+    "--target-port=80 "
+    "--name={label_value}-svc "
+    "--dry-run=client -o yaml | {kubectl} apply -f - >/dev/null; "
+    "phase=\"$({kubectl} get pod fi-net-probe -n {namespace} -o jsonpath='{{.status.phase}}' 2>/dev/null || true)\"; "
+    "if [ \"$phase\" != \"Running\" ]; then "
+    "{kubectl} delete pod fi-net-probe -n {namespace} --ignore-not-found --wait=true --timeout=15s >/dev/null 2>&1 || true; "
+    "{kubectl} run fi-net-probe "
+    "-n {namespace} "
+    "--image={k8s_probe_image} "
+    "--labels=app=fi-net-probe "
+    "--restart=Never "
+    "--command -- sleep 3600 >/dev/null 2>&1 || true; "
+    "if ! {kubectl} wait -n {namespace} --for=condition=Ready pod/fi-net-probe --timeout=25s >/dev/null 2>&1; then "
+    "echo HTTP_PROBE_UNAVAILABLE=1; "
+    "{kubectl} get pod fi-net-probe -n {namespace} -o wide || true; "
+    "exit 1; "
+    "fi; "
+    "fi; "
+    "{kubectl} label pod fi-net-probe -n {namespace} app=fi-net-probe --overwrite >/dev/null 2>&1 || true; "
+    "ok=0; fail=0; total=0; "
+    "{kubectl} exec -n {namespace} fi-net-probe -- wget -q -T 3 -O /dev/null http://{label_value}-svc >/dev/null 2>&1 || true; "
+    "for i in 1 2 3 4 5; do "
+    "start=$(python3 -c 'import time; print(int(time.time()*1000))'); "
+    "if {kubectl} exec -n {namespace} fi-net-probe -- wget -q -T 3 -O /dev/null http://{label_value}-svc; then "
+    "end=$(python3 -c 'import time; print(int(time.time()*1000))'); "
+    "dt=$((end-start)); "
+    "echo sample_ms=$dt; "
+    "total=$((total+dt)); "
+    "ok=$((ok+1)); "
+    "else "
+    "fail=$((fail+1)); "
+    "echo sample_fail; "
+    "fi; "
+    "sleep 0.2; "
+    "done; "
+    "if [ \"$ok\" -gt 0 ]; then avg=$((total/ok)); else avg=0; fi; "
+    "echo HTTP_PROBE_OK=$ok; "
+    "echo HTTP_PROBE_FAIL=$fail; "
+    "echo HTTP_PROBE_AVG_MS=$avg; "
+    "true"
+)
+
+K8S_WAIT_CHAOS_APPLIED_CMD = (
+    "seen=''; "
+    "for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do "
+    "events=\"$({kubectl} get events -n {namespace} "
+    "--field-selector involvedObject.name={chaos_name} "
+    "--sort-by=.lastTimestamp 2>/dev/null || true)\"; "
+    "seen=\"$events\"; "
+    "if printf '%s\\n' \"$events\" | grep -Ei 'Successfully apply chaos|Applied' >/dev/null; then "
+    "echo \"$events\"; "
+    "exit 0; "
+    "fi; "
+    "if printf '%s\\n' \"$events\" | grep -Ei 'Failed to select targets|no pod is selected' >/dev/null; then "
+    "echo \"$events\"; "
+    "exit 1; "
+    "fi; "
+    "sleep 1; "
+    "done; "
+    "echo \"$seen\"; "
+    "echo '未观察到 Chaos 命中事件: {chaos_name}'; "
+    "{kubectl} describe networkchaos {chaos_name} -n {namespace} || true; "
+    "exit 1"
+)
+
+K8S_BASELINE = [
+    {"title": "K8s 节点状态", "cmd": "{kubectl} get nodes -o wide", "scope": "local", "timeout": 20},
+    {"title": "准备目标应用 Pod", "cmd": K8S_PREPARE_TARGET_CMD, "scope": "local", "timeout": 240},
+    {"title": "目标应用 Pod", "cmd": K8S_TARGET_PODS_CMD, "scope": "local", "timeout": 20},
+]
+
+K8S_NETWORK_BASELINE = [
+    *K8S_BASELINE,
+    {"title": "HTTP 探测 (注入前)", "cmd": K8S_HTTP_PROBE_CMD, "scope": "local", "timeout": 60},
+]
+
+K8S_CHAOS_VERIFY = [
+    {"title": "Chaos 实验资源", "cmd": "{kubectl} get podchaos,networkchaos,stresschaos -n {namespace} 2>/dev/null || true", "scope": "local", "timeout": 20},
+    {"title": "最近事件", "cmd": "{kubectl} get events -n {namespace} --sort-by=.lastTimestamp | tail -n 40", "scope": "local", "timeout": 20},
+    {"title": "注入后 Pod 状态", "cmd": K8S_TARGET_PODS_CMD, "scope": "local", "timeout": 20},
+]
+
+K8S_NETWORK_VERIFY = [
+    {"title": "等待 Chaos 命中", "cmd": K8S_WAIT_CHAOS_APPLIED_CMD, "scope": "local", "timeout": 40},
+    {"title": "HTTP 探测 (注入后)", "cmd": K8S_HTTP_PROBE_CMD, "scope": "local", "timeout": 60},
+    {"title": "Chaos 实验资源", "cmd": "{kubectl} get podchaos,networkchaos,stresschaos -n {namespace} 2>/dev/null || true", "scope": "local", "timeout": 20},
+    {"title": "最近事件", "cmd": "{kubectl} get events -n {namespace} --sort-by=.lastTimestamp | tail -n 40", "scope": "local", "timeout": 20},
+    {"title": "注入后 Pod 状态", "cmd": K8S_TARGET_PODS_CMD, "scope": "local", "timeout": 20},
+]
+
+FUNC_TESTS = [
+    {
+        "key": "test_k8s_pod_kill",
+        "title": "Pod Kill 故障注入",
+        "desc": "通过 PodChaos 杀死一个匹配 Pod，观察 Deployment 自动拉起新 Pod。",
+        "group": "chaos_pod",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-pod-kill", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_BASELINE,
+        "action": "k8s_pod_kill",
+        "action_params": {"chaos_mode": "one"},
+        "verify": K8S_CHAOS_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "podchaos"},
+    },
+    {
+        "key": "test_k8s_container_kill",
+        "title": "Container Kill 故障注入",
+        "desc": "通过 PodChaos 杀死容器进程，观察容器重启与事件记录。",
+        "group": "chaos_pod",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-container-kill", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "container_name", "label": "容器名", "type": "text", "default": "nginx", "required": False},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_BASELINE,
+        "action": "k8s_container_kill",
+        "action_params": {"chaos_mode": "one"},
+        "verify": K8S_CHAOS_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "podchaos"},
+    },
+    {
+        "key": "test_k8s_network_delay",
+        "title": "Pod 网络延迟注入",
+        "desc": "通过 NetworkChaos 注入延迟、抖动和相关性。",
+        "group": "chaos_network",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-network-delay", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "ms", "label": "延迟 (ms)", "type": "number", "default": 800, "required": True},
+            {"name": "jitter", "label": "抖动 (ms)", "type": "number", "default": 100, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 60, "required": True},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_NETWORK_BASELINE,
+        "action": "k8s_network_delay",
+        "action_params": {"chaos_mode": "all", "correlation": 25},
+        "verify": K8S_NETWORK_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "networkchaos"},
+    },
+    {
+        "key": "test_k8s_network_loss",
+        "title": "Pod 网络丢包注入",
+        "desc": "通过 NetworkChaos 注入丢包，观察请求失败与恢复。",
+        "group": "chaos_network",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-network-loss", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "percent", "label": "丢包率 (%)", "type": "number", "default": 50, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 60, "required": True},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_NETWORK_BASELINE,
+        "action": "k8s_network_loss",
+        "action_params": {"chaos_mode": "all", "correlation": 25},
+        "verify": K8S_NETWORK_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "networkchaos"},
+    },
+    {
+        "key": "test_k8s_cpu_stress",
+        "title": "Pod CPU 压力注入",
+        "desc": "通过 StressChaos 对匹配 Pod 注入 CPU 压力。",
+        "group": "chaos_resource",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-cpu-stress", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "workers", "label": "工作线程", "type": "number", "default": 2, "required": True},
+            {"name": "load", "label": "CPU 负载 (%)", "type": "number", "default": 80, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 120, "required": True},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_BASELINE,
+        "action": "k8s_cpu_stress",
+        "action_params": {"chaos_mode": "one"},
+        "verify": K8S_CHAOS_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "stresschaos"},
+    },
+    {
+        "key": "test_k8s_memory_stress",
+        "title": "Pod 内存压力注入",
+        "desc": "通过 StressChaos 对匹配 Pod 注入内存压力。",
+        "group": "chaos_resource",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-memory-stress", "required": True},
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+            {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "workers", "label": "工作线程", "type": "number", "default": 1, "required": True},
+            {"name": "memory_mb", "label": "内存 (MB)", "type": "number", "default": 256, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 120, "required": True},
+        ],
+        "require_baseline": True,
+        "baseline": K8S_BASELINE,
+        "action": "k8s_memory_stress",
+        "action_params": {"chaos_mode": "one"},
+        "verify": K8S_CHAOS_VERIFY,
+        "cleanup": "k8s_chaos_clear",
+        "cleanup_params": {"chaos_kind": "stresschaos"},
+    },
+]
+
+FUNC_TESTS += [t for t in LEGACY_FUNC_TESTS if t.get("group") in {"vm", "kvm"}]
+
 # Quick lookup by key
 FUNC_TESTS_MAP: Dict[str, Dict[str, Any]] = {t["key"]: t for t in FUNC_TESTS}

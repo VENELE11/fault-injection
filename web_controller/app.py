@@ -10,10 +10,25 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from web_controller.db import get_run, init_db, list_runs, record_run
+from web_controller.k8s_chaos import (
+    chaos_clear_cmds,
+    chaos_status_cmds,
+    container_kill_cmds,
+    cpu_stress_cmds,
+    k8s_demo_delete_cmds,
+    k8s_demo_deploy_cmds,
+    k8s_status_cmds,
+    memory_stress_cmds,
+    network_delay_cmds,
+    network_loss_cmds,
+    pod_kill_cmds,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_PATH = BASE_DIR / "config.json"
@@ -22,10 +37,18 @@ REPO_ROOT = BASE_DIR.parent
 VM_DIR = REPO_ROOT / "vm_injection"
 VM_LOG_DIR = REPO_ROOT / ".vm_logs"
 
-app = FastAPI(title="Fault Injection Controller", version="0.4")
+app = FastAPI(title="云平台故障注入工具", version="0.4")
 
 static_dir = BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+def persist_history_safely(**kwargs: Any) -> Optional[int]:
+    try:
+        return record_run(**kwargs)
+    except Exception as exc:
+        print(f"[history-db] persist failed: {exc}")
+        return None
 
 
 class ActionRequest(BaseModel):
@@ -35,6 +58,26 @@ class ActionRequest(BaseModel):
 
 
 GROUPS = [
+    {
+        "key": "k8s",
+        "title": "K8s 状态概览",
+        "desc": "k3s 节点、Pod 与 Chaos Mesh 实验状态查看。",
+    },
+    {
+        "key": "chaos_pod",
+        "title": "Pod 混沌实验",
+        "desc": "通过 Chaos Mesh 注入 Pod Kill、容器 Kill 等故障。",
+    },
+    {
+        "key": "chaos_network",
+        "title": "网络混沌实验",
+        "desc": "通过 NetworkChaos 注入延迟、丢包等网络异常。",
+    },
+    {
+        "key": "chaos_resource",
+        "title": "资源混沌实验",
+        "desc": "通过 StressChaos 注入 CPU 与内存压力。",
+    },
     {
         "key": "cluster",
         "title": "集群管理",
@@ -504,12 +547,17 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
     vm_cfg = cfg.get("vm", {})
     kvm_cfg = cfg.get("kvm", {})
     cs_cfg = cfg.get("cloudstack", {})
+    k8s_cfg = cfg.get("kubernetes", {})
     vm_base_dir = vm_cfg.get("base_dir", "")
     kvm_base_dir = kvm_cfg.get("base_dir", "")
+    kubectl_cmd = str(k8s_cfg.get("kubectl", "kubectl"))
+    kubeconfig = str(k8s_cfg.get("kubeconfig", ""))
+    kubectl = f"KUBECONFIG={shlex.quote(kubeconfig)} {kubectl_cmd}" if kubeconfig else kubectl_cmd
 
     return {
         "hadoop_home": hadoop_home,
         "hadoop_sbin": f"{hadoop_home}/sbin",
+        "hadoop_bin": f"{hadoop_home}/bin",
         "injector": injector,
         "vm_base_dir": vm_base_dir,
         "kvm_base_dir": kvm_base_dir,
@@ -521,6 +569,14 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "vm_reg_injector": vm_cfg.get("reg_injector", ""),
         "kvm_injector": kvm_cfg.get("injector", ""),
         "cloudstack_injector": cs_cfg.get("injector", ""),
+        "kubectl_cmd": kubectl_cmd,
+        "kubeconfig": kubeconfig,
+        "kubectl": kubectl,
+        "k8s_default_namespace": k8s_cfg.get("default_namespace", "default"),
+        "chaos_namespace": k8s_cfg.get("chaos_namespace", "chaos-mesh"),
+        "k8s_demo_image": k8s_cfg.get("demo_image", "nginx"),
+        "k8s_demo_replicas": k8s_cfg.get("demo_replicas", 2),
+        "k8s_probe_image": k8s_cfg.get("probe_image", "busybox:1.36"),
     }
 
 
@@ -569,6 +625,8 @@ PARAM_ENUMS = {
     "guest_type": {"data", "divzero", "invalid"},
     "cpu_state": {"online", "offline"},
     "cs_component": {"ms", "agent", "usage", "mysql"},
+    "chaos_mode": {"one", "all"},
+    "chaos_kind": {"all", "podchaos", "networkchaos", "stresschaos"},
 }
 
 NUM_RANGES = {
@@ -589,10 +647,233 @@ NUM_RANGES = {
     "reg_loop": (0, 1000000),
     "reg_interval": (1, 600000),
     "cpu_id": (0, 1024),
+    "replicas": (1, 100),
+    "workers": (1, 64),
+    "load": (1, 100),
+    "memory_mb": (1, 1048576),
 }
+
+K8S_SAFE_PARAM_NAMES = {
+    "namespace",
+    "deployment",
+    "label_key",
+    "label_value",
+    "chaos_name",
+    "container_name",
+}
+
+K8S_SELECTOR_PARAMS = [
+    {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+    {"name": "label_key", "label": "标签键", "type": "text", "default": "app", "required": True},
+    {"name": "label_value", "label": "标签值", "type": "text", "default": "nginx-demo", "required": True},
+]
+
+K8S_CHAOS_COMMON_PARAMS = [
+    {"name": "chaos_name", "label": "实验名称", "type": "text", "required": True},
+    {
+        "name": "chaos_mode",
+        "label": "选择模式",
+        "type": "select",
+        "options": [
+            {"value": "one", "label": "单个 Pod"},
+            {"value": "all", "label": "全部匹配 Pod"},
+        ],
+        "default": "one",
+        "required": True,
+    },
+    *K8S_SELECTOR_PARAMS,
+]
 
 
 ACTIONS: Dict[str, Dict[str, Any]] = {
+    "k8s_status": {
+        "title": "K8s / Chaos 状态查看",
+        "desc": "查看节点、Pod、Chaos Mesh 实验和最近事件。",
+        "group": "k8s",
+        "scope": "local",
+        "params": [
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": False},
+        ],
+        "cmds": k8s_status_cmds,
+        "timeout": 30,
+    },
+    "k8s_demo_deploy": {
+        "title": "部署演示应用",
+        "desc": "创建或更新 nginx-demo Deployment，用于混沌实验验证。",
+        "group": "k8s",
+        "scope": "local",
+        "params": [
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "deployment", "label": "Deployment", "type": "text", "default": "nginx-demo", "required": True},
+            {"name": "image", "label": "镜像", "type": "text", "default": "nginx", "required": True},
+            {"name": "replicas", "label": "副本数", "type": "number", "default": 2, "required": True},
+        ],
+        "cmds": k8s_demo_deploy_cmds,
+        "timeout": 240,
+    },
+    "k8s_demo_delete": {
+        "title": "删除演示应用",
+        "desc": "删除 nginx-demo Deployment。",
+        "group": "k8s",
+        "scope": "local",
+        "params": [
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {"name": "deployment", "label": "Deployment", "type": "text", "default": "nginx-demo", "required": True},
+        ],
+        "cmds": k8s_demo_delete_cmds,
+        "timeout": 60,
+    },
+    "k8s_chaos_status": {
+        "title": "查看混沌实验",
+        "desc": "查看 Chaos Mesh 实验详情和最近事件。",
+        "group": "k8s",
+        "scope": "local",
+        "params": [
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": False},
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "required": False},
+        ],
+        "cmds": chaos_status_cmds,
+        "timeout": 30,
+    },
+    "k8s_chaos_clear": {
+        "title": "清理混沌实验",
+        "desc": "删除指定或全部 Chaos Mesh 实验资源。",
+        "group": "k8s",
+        "scope": "local",
+        "params": [
+            {"name": "namespace", "label": "命名空间", "type": "text", "default": "default", "required": True},
+            {
+                "name": "chaos_kind",
+                "label": "实验类型",
+                "type": "select",
+                "options": [
+                    {"value": "all", "label": "全部"},
+                    {"value": "podchaos", "label": "PodChaos"},
+                    {"value": "networkchaos", "label": "NetworkChaos"},
+                    {"value": "stresschaos", "label": "StressChaos"},
+                ],
+                "default": "all",
+                "required": True,
+            },
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "required": False},
+        ],
+        "cmds": chaos_clear_cmds,
+        "timeout": 60,
+    },
+    "k8s_pod_kill": {
+        "title": "Pod Kill",
+        "desc": "通过 Chaos Mesh 杀死一个或多个匹配 Pod。",
+        "group": "chaos_pod",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-pod-kill", "required": True},
+            *K8S_CHAOS_COMMON_PARAMS[1:],
+        ],
+        "cmds": pod_kill_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
+    "k8s_container_kill": {
+        "title": "Container Kill",
+        "desc": "杀死匹配 Pod 中的容器进程，观察容器重启。",
+        "group": "chaos_pod",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-container-kill", "required": True},
+            *K8S_CHAOS_COMMON_PARAMS[1:],
+            {"name": "container_name", "label": "容器名", "type": "text", "default": "nginx", "required": False},
+        ],
+        "cmds": container_kill_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
+    "k8s_network_delay": {
+        "title": "网络延迟",
+        "desc": "通过 NetworkChaos 为匹配 Pod 注入延迟、抖动和相关性。",
+        "group": "chaos_network",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-network-delay", "required": True},
+            {
+                "name": "chaos_mode",
+                "label": "选择模式",
+                "type": "select",
+                "options": [
+                    {"value": "all", "label": "全部匹配 Pod"},
+                    {"value": "one", "label": "单个 Pod"},
+                ],
+                "default": "all",
+                "required": True,
+            },
+            *K8S_SELECTOR_PARAMS,
+            {"name": "ms", "label": "延迟 (ms)", "type": "number", "default": 800, "required": True},
+            {"name": "jitter", "label": "抖动 (ms)", "type": "number", "default": 100, "required": True},
+            {"name": "correlation", "label": "相关性 (%)", "type": "number", "default": 25, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 60, "required": True},
+        ],
+        "cmds": network_delay_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
+    "k8s_network_loss": {
+        "title": "网络丢包",
+        "desc": "通过 NetworkChaos 为匹配 Pod 注入丢包。",
+        "group": "chaos_network",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-network-loss", "required": True},
+            {
+                "name": "chaos_mode",
+                "label": "选择模式",
+                "type": "select",
+                "options": [
+                    {"value": "all", "label": "全部匹配 Pod"},
+                    {"value": "one", "label": "单个 Pod"},
+                ],
+                "default": "all",
+                "required": True,
+            },
+            *K8S_SELECTOR_PARAMS,
+            {"name": "percent", "label": "丢包率 (%)", "type": "number", "default": 50, "required": True},
+            {"name": "correlation", "label": "相关性 (%)", "type": "number", "default": 25, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 60, "required": True},
+        ],
+        "cmds": network_loss_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
+    "k8s_cpu_stress": {
+        "title": "CPU 压力",
+        "desc": "通过 StressChaos 对匹配 Pod 注入 CPU 压力。",
+        "group": "chaos_resource",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-cpu-stress", "required": True},
+            *K8S_CHAOS_COMMON_PARAMS[1:],
+            {"name": "workers", "label": "工作线程", "type": "number", "default": 2, "required": True},
+            {"name": "load", "label": "CPU 负载 (%)", "type": "number", "default": 80, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 120, "required": True},
+        ],
+        "cmds": cpu_stress_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
+    "k8s_memory_stress": {
+        "title": "内存压力",
+        "desc": "通过 StressChaos 对匹配 Pod 注入内存压力。",
+        "group": "chaos_resource",
+        "scope": "local",
+        "params": [
+            {"name": "chaos_name", "label": "实验名称", "type": "text", "default": "fi-memory-stress", "required": True},
+            *K8S_CHAOS_COMMON_PARAMS[1:],
+            {"name": "workers", "label": "工作线程", "type": "number", "default": 1, "required": True},
+            {"name": "memory_mb", "label": "内存 (MB)", "type": "number", "default": 256, "required": True},
+            {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 120, "required": True},
+        ],
+        "cmds": memory_stress_cmds,
+        "timeout": 60,
+        "danger": True,
+    },
     "cluster_status": {
         "title": "节点进程状态 (jps)",
         "desc": "在所有节点上执行 jps，查看 Hadoop 进程状态。",
@@ -1630,6 +1911,7 @@ def _run_check_cmds(
 @app.post("/api/functest")
 def api_functest(req: FuncTestRequest) -> JSONResponse:
     """Run a single functional test scenario with baseline → action → verify."""
+    started_at = time.time()
     test_key = req.key
     user_params = req.params or {}
 
@@ -1648,12 +1930,21 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
     baseline_results = _run_check_cmds(
         cfg, scenario.get("baseline", []), action_params, ctx,
     )
+    baseline_ok = all(check.get("ok") for check in baseline_results) if baseline_results else True
 
     # 2. Execute the action
     action_key = scenario["action"]
     action_response = None
     action_ok = False
-    if action_key and action_key in ACTIONS:
+    skip_action = bool(scenario.get("require_baseline")) and not baseline_ok
+    if skip_action:
+        action_response = {
+            "ok": False,
+            "action": action_key,
+            "results": [],
+            "error": "基线检查未通过，已跳过故障注入动作。",
+        }
+    elif action_key and action_key in ACTIONS:
         try:
             # Call the existing action endpoint directly via internal logic
             spec = ACTIONS[action_key]
@@ -1703,27 +1994,52 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
             }
 
     # 3. Verify checks
-    verify_results = _run_check_cmds(
+    verify_results = [] if skip_action else _run_check_cmds(
         cfg, scenario.get("verify", []), action_params, ctx,
     )
+    verify_ok = all(check.get("ok") for check in verify_results) if verify_results else True
+    overall_ok = baseline_ok and action_ok and verify_ok
 
     # Build response
-    return JSONResponse({
+    payload = {
         "key": test_key,
         "title": scenario["title"],
-        "ok": action_ok,
+        "ok": overall_ok,
         "baseline": baseline_results,
         "action": action_response,
         "verify": verify_results,
+        "params": action_params,
         "has_cleanup": bool(scenario.get("cleanup")),
         "cleanup_action": scenario.get("cleanup"),
         "cleanup_params": scenario.get("cleanup_params", scenario.get("cleanup_params_override", {})),
-    })
+    }
+
+    phases: List[Dict[str, Any]] = []
+    for check in baseline_results:
+        phases.append({"phase": "baseline", "check_title": check.get("title"), "results": check.get("results", [])})
+    if action_response:
+        phases.append({"phase": "action", "results": action_response.get("results", [])})
+    for check in verify_results:
+        phases.append({"phase": "verify", "check_title": check.get("title"), "results": check.get("results", [])})
+
+    persist_history_safely(
+        run_type="functest",
+        action_key=action_key,
+        scenario_key=test_key,
+        title=scenario.get("title"),
+        params=action_params,
+        ok=overall_ok,
+        started_at=started_at,
+        finished_at=time.time(),
+        phases=phases,
+    )
+    return JSONResponse(payload)
 
 
 @app.post("/api/functest/cleanup")
 def api_functest_cleanup(req: FuncTestRequest) -> JSONResponse:
     """Run cleanup action for one functional test scenario."""
+    started_at = time.time()
     test_key = req.key
     user_params = req.params or {}
 
@@ -1754,24 +2070,35 @@ def api_functest_cleanup(req: FuncTestRequest) -> JSONResponse:
         ActionRequest(
             action=cleanup_action,
             params=cleanup_params,
-            tests={"kvm": False},
+            tests={"kvm": False, "__persist": False},
         )
     )
     payload = json.loads(action_resp.body.decode("utf-8"))
 
-    return JSONResponse(
-        {
-            "ok": bool(payload.get("ok")),
-            "key": test_key,
-            "cleanup_action": cleanup_action,
-            "results": payload.get("results", []),
-            "error": payload.get("error"),
-        }
+    response_payload = {
+        "ok": bool(payload.get("ok")),
+        "key": test_key,
+        "cleanup_action": cleanup_action,
+        "results": payload.get("results", []),
+        "error": payload.get("error"),
+    }
+    persist_history_safely(
+        run_type="cleanup",
+        action_key=cleanup_action,
+        scenario_key=test_key,
+        title=f"{scenario.get('title', test_key)} - 清理",
+        params=cleanup_params,
+        ok=bool(payload.get("ok")),
+        started_at=started_at,
+        finished_at=time.time(),
+        phases=[{"phase": "cleanup", "results": payload.get("results", [])}],
     )
+    return JSONResponse(response_payload)
 
 
 @app.on_event("startup")
 def auto_start_vms() -> None:
+    init_db()
     for node in ("master", "slave1", "slave2"):
         _ensure_vm_running(node)
 
@@ -1807,12 +2134,32 @@ def api_config() -> JSONResponse:
     return JSONResponse({"nodes": nodes, "actions": actions, "groups": GROUPS, "output": output_cfg})
 
 
+@app.get("/api/history")
+def api_history(
+    limit: int = Query(50, ge=1, le=500),
+    run_type: Optional[str] = Query(None),
+) -> JSONResponse:
+    """Return persisted fault-injection run history."""
+    return JSONResponse({"runs": list_runs(limit=limit, run_type=run_type)})
+
+
+@app.get("/api/history/{run_id}")
+def api_history_detail(run_id: int) -> JSONResponse:
+    """Return one persisted run with all command results."""
+    run = get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="历史记录不存在")
+    return JSONResponse(run)
+
+
 @app.post("/api/action")
 def api_action(req: ActionRequest) -> JSONResponse:
+    started_at = time.time()
     cfg = load_config()
     action = req.action
     params = req.params or {}
     test_flags = req.tests or {}
+    persist_history = test_flags.get("__persist", True) is not False
 
     if action not in ACTIONS:
         raise HTTPException(status_code=400, detail="未知操作")
@@ -1845,6 +2192,12 @@ def api_action(req: ActionRequest) -> JSONResponse:
     if "signature" in params and params.get("signature"):
         if not validate_hex(params["signature"]):
             raise HTTPException(status_code=400, detail="特征值必须为十六进制")
+
+    for name in K8S_SAFE_PARAM_NAMES:
+        if name in params and params.get(name):
+            value = str(params[name])
+            if not re.fullmatch(r"[A-Za-z0-9_.:/@-]{1,253}", value):
+                raise HTTPException(status_code=400, detail=f"参数 {name} 包含非法字符")
 
     for name, (min_v, max_v) in NUM_RANGES.items():
         if name in params:
@@ -1894,7 +2247,28 @@ def api_action(req: ActionRequest) -> JSONResponse:
 
     ok = all(r.get("ok") for r in results) if results else False
     tests = collect_tests(cfg, action, spec, params, nodes, ok, test_flags=test_flags)
-    return JSONResponse({"ok": ok, "action": action, "results": results, "tests": tests})
+    payload = {"ok": ok, "action": action, "results": results, "tests": tests}
+    if persist_history:
+        phases = [{"phase": "action", "results": results}]
+        for test in tests:
+            phases.append(
+                {
+                    "phase": "auto_test",
+                    "check_title": test.get("title"),
+                    "results": test.get("results", []),
+                }
+            )
+        persist_history_safely(
+            run_type="action",
+            action_key=action,
+            title=spec.get("title"),
+            params=params,
+            ok=ok,
+            started_at=started_at,
+            finished_at=time.time(),
+            phases=phases,
+        )
+    return JSONResponse(payload)
 
 
 @app.get("/api/test")

@@ -38,6 +38,12 @@ MOCK_CONFIG: Dict[str, Any] = {
         "injector": "/tmp/kvm_injection/cloudstack-fi/cloudstack_injector",
         "use_sudo": True,
     },
+    "kubernetes": {
+        "kubectl": "kubectl",
+        "kubeconfig": "",
+        "default_namespace": "default",
+        "chaos_namespace": "chaos-mesh",
+    },
     "vm": {
         "base_dir": "/tmp/vm_injection",
         "process_injector": "/tmp/vm_injection/process_injector",

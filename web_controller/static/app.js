@@ -15,18 +15,21 @@ const refreshBtn = document.getElementById("refreshConfig");
 const clearBtn = document.getElementById("clearHistory");
 const outputLimitEl = document.getElementById("outputLimit");
 const recoverAllBtn = document.getElementById("recoverAll");
+const clusterStatusBtn = document.getElementById("clusterStatus");
+const overviewNamespaceEl = document.getElementById("overviewNamespace");
 
 // ============================================================
 //  Constants
 // ============================================================
 const GROUP_ICONS = {
+  k8s: "☸️", chaos_pod: "Pod", chaos_network: "Net", chaos_resource: "CPU",
   cluster: "🖥️", process: "⚙️", network: "🌐", resource: "📊",
   hdfs: "💾", mapreduce: "🗺️", cloudstack: "☁️", vm: "🔧", kvm: "🔌",
 };
 
 // Actions shown as standalone utility cards (not covered by test scenarios)
 const UTILITY_ACTIONS = new Set([
-  "hadoop_start", "hadoop_stop", "kvm_benchmark", "kvm_clear",
+  "kvm_benchmark", "kvm_clear",
 ]);
 
 // ============================================================
@@ -52,6 +55,10 @@ function escapeHtml(str) {
   const d = document.createElement("div");
   d.textContent = str;
   return d.innerHTML;
+}
+
+function escapeRegExp(str) {
+  return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function fetchJson(url, options = {}) {
@@ -121,6 +128,45 @@ function getCheckOutput(checks, titleKeyword) {
   return String(first.stdout || first.output || "");
 }
 
+function getCheckMergedOutput(checks, titleKeyword) {
+  const c = (checks || []).find(it => String((it && it.title) || "").includes(titleKeyword));
+  if (!c) return "";
+  return (c.results || []).map(r => `${r.stdout || r.output || ""}\n${r.stderr || ""}`).join("\n");
+}
+
+function mergeResultOutputs(results) {
+  return (results || []).map(r => `${r.stdout || r.output || ""}\n${r.stderr || ""}`).join("\n");
+}
+
+function countReadyPods(text) {
+  let count = 0;
+  String(text || "").split("\n").forEach(line => {
+    if (/^\S+\s+\d+\/\d+\s+Running\s+\d+\s+/.test(line.trim())) count += 1;
+  });
+  return count;
+}
+
+function maxRestartCount(text) {
+  let max = 0;
+  String(text || "").split("\n").forEach(line => {
+    const m = line.trim().match(/^\S+\s+\d+\/\d+\s+\S+\s+(\d+)\s+/);
+    if (m) max = Math.max(max, Number(m[1]) || 0);
+  });
+  return max;
+}
+
+function parseHttpProbe(text) {
+  const raw = String(text || "");
+  const ok = raw.match(/HTTP_PROBE_OK=(\d+)/);
+  const fail = raw.match(/HTTP_PROBE_FAIL=(\d+)/);
+  const avg = raw.match(/HTTP_PROBE_AVG_MS=(\d+)/);
+  return {
+    ok: ok ? Number(ok[1]) : null,
+    fail: fail ? Number(fail[1]) : null,
+    avgMs: avg ? Number(avg[1]) : null,
+  };
+}
+
 // ============================================================
 //  Action Signal Detection
 // ============================================================
@@ -176,6 +222,122 @@ function renderActionFocusCard(data, actionSignals) {
     <div class="focus-title">${title}</div>
     <div class="focus-text">${detail}</div>
     ${parts.length ? `<div class="focus-meta">${escapeHtml(parts.join(" · "))}</div>` : ""}
+  `;
+  return card;
+}
+
+function renderK8sChaosFocusCard(data) {
+  const key = (data && data.key) || "";
+  if (!key.startsWith("test_k8s_")) return null;
+
+  const actionKey = (data && data.action && data.action.action) || "";
+  const defaultChaosNames = {
+    k8s_pod_kill: "fi-pod-kill",
+    k8s_container_kill: "fi-container-kill",
+    k8s_network_delay: "fi-network-delay",
+    k8s_network_loss: "fi-network-loss",
+    k8s_cpu_stress: "fi-cpu-stress",
+    k8s_memory_stress: "fi-memory-stress",
+  };
+  const params = (data && data.params) || {};
+  const chaosName = params.chaos_name || defaultChaosNames[actionKey] || actionKey || "Chaos";
+  const chaosPattern = new RegExp(escapeRegExp(chaosName), "i");
+  const beforePods = getCheckMergedOutput(data.baseline, "目标应用 Pod");
+  const afterPods = getCheckMergedOutput(data.verify, "注入后 Pod 状态");
+  const waitChaos = getCheckMergedOutput(data.verify, "等待 Chaos 命中");
+  const events = getCheckMergedOutput(data.verify, "最近事件");
+  const resources = getCheckMergedOutput(data.verify, "Chaos 实验资源");
+  const actionText = mergeResultOutputs((data.action && data.action.results) || []);
+  const evidence = `${waitChaos}\n${events}\n${resources}\n${actionText}`;
+  const chaosEvidence = evidence
+    .split("\n")
+    .filter(line => chaosPattern.test(line))
+    .join("\n");
+  const beforeProbe = parseHttpProbe(getCheckMergedOutput(data.baseline, "HTTP 探测"));
+  const afterProbe = parseHttpProbe(getCheckMergedOutput(data.verify, "HTTP 探测"));
+  const probeUnavailable = /HTTP_PROBE_UNAVAILABLE=1/.test(`${getCheckMergedOutput(data.baseline, "HTTP 探测")}\n${getCheckMergedOutput(data.verify, "HTTP 探测")}`);
+
+  const beforeReady = countReadyPods(beforePods);
+  const afterReady = countReadyPods(afterPods);
+  const beforeRestart = maxRestartCount(beforePods);
+  const afterRestart = maxRestartCount(afterPods);
+  const resourcePresent = chaosPattern.test(evidence) || resources.includes(actionKey);
+  const scopedEvidence = chaosEvidence || actionText;
+  const failedSelect = /Failed to select targets|no pod is selected/i.test(scopedEvidence);
+  const applied = /Successfully apply chaos|Applied/i.test(chaosEvidence);
+  const recovered = /Successfully recover chaos|Experiment has been deleted/i.test(chaosEvidence);
+  const noApplyObserved = /未观察到 Chaos 命中事件/i.test(evidence);
+  const podRecreated = /Created pod:/i.test(evidence);
+  const containerStopped = /Stopping container|Killing/i.test(evidence);
+  const restartIncreased = afterRestart > beforeRestart;
+
+  let verdict = "证据不足";
+  let detail = "Chaos 资源已提交，但还没有观察到明确命中事件。稍等几秒后刷新或查看原始输出。";
+  let success = false;
+
+  if (probeUnavailable && (actionKey === "k8s_network_delay" || actionKey === "k8s_network_loss")) {
+    verdict = "探测不可用";
+    detail = "fi-net-probe Pod 未能在 25 秒内 Ready，已快速失败。请检查探测镜像是否可拉取。";
+  } else if (failedSelect) {
+    verdict = "未命中目标";
+    detail = "Chaos Mesh 没有选中目标 Pod，请检查命名空间和标签选择器。";
+  } else if (noApplyObserved && (actionKey === "k8s_network_delay" || actionKey === "k8s_network_loss")) {
+    verdict = "未观察到命中";
+    detail = "NetworkChaos 资源已提交，但本次实验没有在等待窗口内出现 apply chaos 事件。请展开“等待 Chaos 命中”查看 describe 详情。";
+  } else if (actionKey === "k8s_pod_kill") {
+    success = applied && (containerStopped || podRecreated) && afterReady > 0;
+    verdict = success ? "成功" : "观察中";
+    detail = success
+      ? "已命中目标 Pod，Deployment 已自动补齐新的 Running Pod。"
+      : "需要看到 apply chaos、停止容器或新 Pod 创建事件，才算 Pod Kill 命中。";
+  } else if (actionKey === "k8s_container_kill") {
+    success = applied || restartIncreased;
+    verdict = success ? "成功" : "观察中";
+    detail = success
+      ? "已观察到容器级注入命中，或 Pod 重启次数出现增加。"
+      : "已创建实验资源，但还未看到 apply chaos 或 RESTARTS 增加。";
+  } else if (actionKey === "k8s_network_delay") {
+    const delta = afterProbe.avgMs != null && beforeProbe.avgMs != null
+      ? afterProbe.avgMs - beforeProbe.avgMs
+      : null;
+    success = applied && delta !== null && delta >= 100;
+    verdict = success ? "成功" : "影响不明显";
+    detail = success
+      ? `HTTP 平均耗时上升 ${delta}ms，网络延迟注入可观测。`
+      : "Chaos 资源已创建，但 HTTP 探测没有观察到足够明显的延迟上升。";
+  } else if (actionKey === "k8s_network_loss") {
+    const failDelta = afterProbe.fail != null && beforeProbe.fail != null
+      ? afterProbe.fail - beforeProbe.fail
+      : null;
+    success = applied && failDelta !== null && failDelta > 0;
+    verdict = success ? "成功" : "影响不明显";
+    detail = success
+      ? `HTTP 探测失败次数增加 ${failDelta} 次，网络丢包注入可观测。`
+      : "Chaos 资源已创建，但 HTTP 探测失败次数没有明显增加。";
+  } else {
+    success = Boolean(data.ok && resourcePresent && afterReady > 0);
+    verdict = success ? "已创建并验证" : "观察中";
+    detail = success
+      ? "Chaos 资源存在，目标 Pod 仍可观测；可结合业务指标确认影响幅度。"
+      : "需要继续观察 Chaos 事件和目标 Pod 状态。";
+  }
+
+  const parts = [
+    `目标 Pod: ${beforeReady || 0} 个 Running`,
+    afterPods ? `注入后 Pod: ${afterReady || 0} 个 Running` : "",
+    actionKey === "k8s_container_kill" ? `最大重启次数: ${beforeRestart} → ${afterRestart}` : "",
+    applied ? "当前实验已出现 apply chaos 事件" : "",
+    recovered ? "当前实验已出现 recover/delete 事件" : "",
+    podRecreated ? "Deployment 已创建替换 Pod" : "",
+    beforeProbe.avgMs != null ? `HTTP 平均耗时: ${beforeProbe.avgMs} → ${afterProbe.avgMs ?? "?"} ms` : "",
+    beforeProbe.fail != null ? `HTTP 失败次数: ${beforeProbe.fail} → ${afterProbe.fail ?? "?"}` : "",
+  ].filter(Boolean);
+
+  const card = elc("div", `result-focus ${success ? "focus-info" : "focus-hang"}`);
+  card.innerHTML = `
+    <div class="focus-title">K8s 注入结果摘要：${escapeHtml(verdict)}</div>
+    <div class="focus-text">${escapeHtml(detail)}</div>
+    <div class="focus-meta">${escapeHtml(parts.join(" · "))}</div>
   `;
   return card;
 }
@@ -703,6 +865,14 @@ async function runSimpleAction(actionKey, title, params, btn) {
   }
 }
 
+function runClusterStatus() {
+  if (!clusterStatusBtn) return;
+  const namespace = overviewNamespaceEl && overviewNamespaceEl.value.trim()
+    ? overviewNamespaceEl.value.trim()
+    : "default";
+  runSimpleAction("k8s_status", "K8s / Chaos 状态查看", { namespace }, clusterStatusBtn);
+}
+
 async function runRecoveryAll() {
   if (!recoverAllBtn) return;
   const btnText = recoverAllBtn.textContent;
@@ -763,6 +933,9 @@ function buildEnhancedHistoryEntry(title, data, startedAt) {
 
   // Data analysis cards
   const actionSignals = summarizeActionSignals((data && data.action && data.action.results) || []);
+  const isK8sScenario = String((data && data.key) || "").startsWith("test_k8s_");
+  const k8sCard = renderK8sChaosFocusCard(data);
+  if (k8sCard) body.appendChild(k8sCard);
   const focusCard = renderActionFocusCard(data, actionSignals);
   if (focusCard) body.appendChild(focusCard);
   const resourceCard = renderResourceFocusCard(data);
@@ -778,16 +951,18 @@ function buildEnhancedHistoryEntry(title, data, startedAt) {
   const hasBaseline = data.baseline && data.baseline.length > 0;
   const hasVerify = data.verify && data.verify.length > 0;
   if (hasBaseline || hasVerify) {
-    body.appendChild(renderComparison(data.baseline, data.verify));
+    body.appendChild(renderComparison(data.baseline, data.verify, { compact: isK8sScenario }));
   }
 
   // Action execution details
   if (data.action) {
     const actionSec = elc("div", "action-results-section");
     actionSec.innerHTML = `<div class="section-label">⚡ 动作执行详情 — ${escapeHtml(data.action.action || "")}</div>`;
+    const actionTarget = isK8sScenario ? elc("details", "raw-details", "<summary>查看动作原始输出</summary>") : actionSec;
     if (data.action.results && data.action.results.length > 0) {
-      data.action.results.forEach(r => actionSec.appendChild(renderNodeResult(r, { context: "action" })));
+      data.action.results.forEach(r => actionTarget.appendChild(renderNodeResult(r, { context: "action" })));
     }
+    if (isK8sScenario) actionSec.appendChild(actionTarget);
     if (data.action.error) {
       actionSec.appendChild(elc("div", "error-card", `错误: ${escapeHtml(data.action.error)}`));
     }
@@ -863,13 +1038,13 @@ function buildErrorEntry(title, actionKey, err, startedAt) {
 // ============================================================
 //  Comparison Rendering
 // ============================================================
-function renderComparison(baseline, verify) {
+function renderComparison(baseline, verify, options = {}) {
   const comparison = elc("div", "comparison");
 
   if (baseline && baseline.length) {
     const leftCol = elc("div", "compare-col");
     leftCol.appendChild(elc("div", "col-header col-before", "📋 操作前（基线）"));
-    baseline.forEach(check => leftCol.appendChild(renderCheckResult(check)));
+    baseline.forEach(check => leftCol.appendChild(renderCheckResult(check, options)));
     comparison.appendChild(leftCol);
   }
 
@@ -886,21 +1061,25 @@ function renderComparison(baseline, verify) {
   if (verify && verify.length) {
     const rightCol = elc("div", "compare-col");
     rightCol.appendChild(elc("div", "col-header col-after", "🔍 操作后（验证）"));
-    verify.forEach(check => rightCol.appendChild(renderCheckResult(check)));
+    verify.forEach(check => rightCol.appendChild(renderCheckResult(check, options)));
     comparison.appendChild(rightCol);
   }
 
   return comparison;
 }
 
-function renderCheckResult(check) {
+function renderCheckResult(check, options = {}) {
   const card = elc("div", `check-card ${check.ok ? "check-ok" : "check-fail"}`);
   card.appendChild(elc("div", "check-title", `
     <span class="check-icon">${check.ok ? "✓" : "✗"}</span>
     <span>${escapeHtml(check.title)}</span>
   `));
-  card.appendChild(elc("div", "check-cmd", `<code>$ ${escapeHtml(check.cmd)}</code>`));
-  (check.results || []).forEach(r => card.appendChild(renderNodeResult(r)));
+  const outputTarget = options.compact
+    ? elc("details", "raw-details", "<summary>查看 kubectl 原始输出</summary>")
+    : card;
+  outputTarget.appendChild(elc("div", "check-cmd", `<code>$ ${escapeHtml(check.cmd)}</code>`));
+  (check.results || []).forEach(r => outputTarget.appendChild(renderNodeResult(r)));
+  if (options.compact) card.appendChild(outputTarget);
   return card;
 }
 
@@ -966,6 +1145,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (refreshBtn) refreshBtn.addEventListener("click", function () { initLoad(); });
     if (clearBtn) clearBtn.addEventListener("click", function () { historyEl.innerHTML = ""; });
     if (recoverAllBtn) recoverAllBtn.addEventListener("click", function () { runRecoveryAll(); });
+    if (clusterStatusBtn) clusterStatusBtn.addEventListener("click", function () { runClusterStatus(); });
 
     healthCheck().then(function () {
       return initLoad();

@@ -37,6 +37,12 @@
     "injector": "/home/venele/grad_project/kvm_injection/cloudstack-fi/cloudstack_injector",
     "use_sudo": true
   },
+  "kubernetes": {
+    "kubectl": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p 2220 ubuntu@127.0.0.1 sudo k3s kubectl",
+    "kubeconfig": "",
+    "default_namespace": "default",
+    "chaos_namespace": "chaos-mesh"
+  },
   "vm": {
     "base_dir": "/home/venele/grad_project/vm_injection",
     "process_injector": "/home/venele/grad_project/vm_injection/process_injector",

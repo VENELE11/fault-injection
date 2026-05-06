@@ -7,10 +7,10 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>故障注入控制器</title>
+  <title>云平台故障注入工具</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css?v=20260415a" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260506cloud" />
 </head>
 
 <body>
@@ -18,8 +18,8 @@
     <header class="hero">
       <div class="hero-left">
         <div class="badge">Fault Injection Platform</div>
-        <h1>故障注入控制器</h1>
-        <p class="hero-sub">面向 Hadoop / CloudStack 集群的统一故障注入与功能测试平台。</p>
+        <h1>云平台故障注入工具</h1>
+        <p class="hero-sub">面向 k3s / Chaos Mesh 与虚拟化环境的统一故障注入、恢复和状态观测平台。</p>
       </div>
       <div class="hero-right">
         <div class="pill" id="health">连接中...</div>
@@ -33,7 +33,16 @@
           <h2>集群概览</h2>
           <p>当前控制器与节点连接信息。</p>
         </div>
-        <div class="panel-meta" id="outputLimit">输出限制: --</div>
+        <div class="panel-side">
+          <div class="panel-meta" id="outputLimit">输出限制: --</div>
+          <div class="overview-status">
+            <label class="overview-field">
+              <span>命名空间</span>
+              <input id="overviewNamespace" type="text" value="default" />
+            </label>
+            <button class="primary" id="clusterStatus">查看状态</button>
+          </div>
+        </div>
       </div>
       <div class="nodes" id="nodes"></div>
     </section>
@@ -42,7 +51,7 @@
       <div class="panel-head">
         <div>
           <h2>功能面板</h2>
-          <p>全部注入功能，自动执行前后对比与数据分析。</p>
+          <p>选择 Pod、网络、资源和虚拟化层故障注入场景，并自动执行前后对比。</p>
         </div>
         <div class="panel-actions">
           <button class="primary" id="recoverAll">一键恢复</button>
@@ -67,7 +76,7 @@
 
   <datalist id="nodeList"></datalist>
 
-  <script src="/static/app.js?v=20260415a"></script>
+  <script src="/static/app.js?v=20260506cloud"></script>
 </body>
 
 </html>

@@ -43,6 +43,18 @@ kvm注入/**/modules.order
 *.log
 tmp/
 **/tmp/
+.fi_data/
+*.sqlite
+*.sqlite3
+
+# Python/test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated preview artifacts
+output/progress_image_ppt/
+output/doc/assets/unified/_preview_grid.png
 
 # Disk fill simulation files
 **/hdfs_disk_fill
