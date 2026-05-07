@@ -167,6 +167,119 @@ function parseHttpProbe(text) {
   };
 }
 
+function parseK8sCpuMilli(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  const n = Number(raw.replace(/[a-z]+$/, ""));
+  if (!Number.isFinite(n)) return null;
+  if (raw.endsWith("n")) return n / 1000000;
+  if (raw.endsWith("u")) return n / 1000;
+  if (raw.endsWith("m")) return n;
+  return n * 1000;
+}
+
+function parseK8sMemoryMi(value) {
+  const m = String(value || "").trim().match(/^([0-9.]+)([kmgtpe]i?|)$/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n)) return null;
+  const unit = m[2].toLowerCase();
+  const factors = {
+    "": 1 / (1024 * 1024),
+    k: 1000 / (1024 * 1024),
+    ki: 1 / 1024,
+    m: 1000000 / (1024 * 1024),
+    mi: 1,
+    g: 1000000000 / (1024 * 1024),
+    gi: 1024,
+    t: 1000000000000 / (1024 * 1024),
+    ti: 1024 * 1024,
+  };
+  return unit in factors ? n * factors[unit] : null;
+}
+
+function parseK8sResourceMetrics(text) {
+  const raw = String(text || "");
+  const result = {
+    unavailable: /K8S_RESOURCE_METRICS_UNAVAILABLE=1/i.test(raw),
+    available: /K8S_RESOURCE_METRICS_AVAILABLE=1/i.test(raw),
+    rows: 0,
+    cpuMilli: 0,
+    memoryMi: 0,
+  };
+  raw.split("\n").forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || /^(NAME|POD|K8S_|资源指标|error:)/i.test(trimmed)) return;
+    const cols = trimmed.split(/\s+/);
+    if (cols.length < 3) return;
+    const cpu = parseK8sCpuMilli(cols[1]);
+    const mem = parseK8sMemoryMi(cols[2]);
+    if (cpu == null || mem == null) return;
+    result.rows += 1;
+    result.cpuMilli += cpu;
+    result.memoryMi += mem;
+  });
+  return result;
+}
+
+function evaluateK8sStressEffect(data) {
+  const key = (data && data.key) || "";
+  const actionKey = (data && data.action && data.action.action) || key.replace(/^test_/, "");
+  if (!["k8s_cpu_stress", "k8s_memory_stress"].includes(actionKey)) return null;
+
+  const defaultChaosNames = {
+    k8s_cpu_stress: "fi-cpu-stress",
+    k8s_memory_stress: "fi-memory-stress",
+  };
+  const params = (data && data.params) || {};
+  const chaosName = params.chaos_name || defaultChaosNames[actionKey] || actionKey;
+  const chaosPattern = new RegExp(escapeRegExp(chaosName), "i");
+  const waitChaos = getCheckMergedOutput(data.verify, "等待 StressChaos 命中");
+  const events = getCheckMergedOutput(data.verify, "最近事件");
+  const resources = getCheckMergedOutput(data.verify, "Chaos 实验资源");
+  const actionText = mergeResultOutputs((data.action && data.action.results) || []);
+  const chaosEvidence = `${waitChaos}\n${events}\n${resources}\n${actionText}`
+    .split("\n")
+    .filter(line => chaosPattern.test(line))
+    .join("\n");
+  const applied = /Successfully apply chaos|Applied/i.test(chaosEvidence);
+  const beforeMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.baseline, "资源指标"));
+  const afterMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.verify, "资源指标"));
+  if (!applied || beforeMetrics.unavailable || afterMetrics.unavailable || !beforeMetrics.rows || !afterMetrics.rows) {
+    return { success: false };
+  }
+  if (actionKey === "k8s_cpu_stress") {
+    return { success: afterMetrics.cpuMilli - beforeMetrics.cpuMilli >= 100 };
+  }
+  const requested = Number(params.memory_mb) || 0;
+  const threshold = Math.max(16, Math.min(64, requested ? requested * 0.25 : 32));
+  return { success: afterMetrics.memoryMi - beforeMetrics.memoryMi >= threshold };
+}
+
+function evaluateK8sContainerKillEffect(data) {
+  const key = (data && data.key) || "";
+  const actionKey = (data && data.action && data.action.action) || key.replace(/^test_/, "");
+  if (actionKey !== "k8s_container_kill") return null;
+
+  const params = (data && data.params) || {};
+  const chaosName = params.chaos_name || "fi-container-kill";
+  const chaosPattern = new RegExp(escapeRegExp(chaosName), "i");
+  const events = getCheckMergedOutput(data.verify, "最近事件");
+  const resources = getCheckMergedOutput(data.verify, "Chaos 实验资源");
+  const actionText = mergeResultOutputs((data.action && data.action.results) || []);
+  const evidence = `${events}\n${resources}\n${actionText}`;
+  const chaosEvidence = evidence
+    .split("\n")
+    .filter(line => chaosPattern.test(line))
+    .join("\n");
+  const beforePods = getCheckMergedOutput(data.baseline, "目标应用 Pod");
+  const afterPods = getCheckMergedOutput(data.verify, "注入后 Pod 状态");
+  const beforeRestart = maxRestartCount(beforePods);
+  const afterRestart = maxRestartCount(afterPods);
+  const applied = /Successfully apply chaos|Applied/i.test(chaosEvidence);
+  const lifecycle = /Stopping container|Killing|Created container|Started container/i.test(evidence);
+  return { success: applied && (afterRestart > beforeRestart || lifecycle) };
+}
+
 // ============================================================
 //  Action Signal Detection
 // ============================================================
@@ -230,7 +343,7 @@ function renderK8sChaosFocusCard(data) {
   const key = (data && data.key) || "";
   if (!key.startsWith("test_k8s_")) return null;
 
-  const actionKey = (data && data.action && data.action.action) || "";
+  const actionKey = (data && data.action && data.action.action) || key.replace(/^test_/, "");
   const defaultChaosNames = {
     k8s_pod_kill: "fi-pod-kill",
     k8s_container_kill: "fi-container-kill",
@@ -244,7 +357,10 @@ function renderK8sChaosFocusCard(data) {
   const chaosPattern = new RegExp(escapeRegExp(chaosName), "i");
   const beforePods = getCheckMergedOutput(data.baseline, "目标应用 Pod");
   const afterPods = getCheckMergedOutput(data.verify, "注入后 Pod 状态");
-  const waitChaos = getCheckMergedOutput(data.verify, "等待 Chaos 命中");
+  const waitChaos = [
+    getCheckMergedOutput(data.verify, "等待 Chaos 命中"),
+    getCheckMergedOutput(data.verify, "等待 StressChaos 命中"),
+  ].join("\n");
   const events = getCheckMergedOutput(data.verify, "最近事件");
   const resources = getCheckMergedOutput(data.verify, "Chaos 实验资源");
   const actionText = mergeResultOutputs((data.action && data.action.results) || []);
@@ -256,6 +372,8 @@ function renderK8sChaosFocusCard(data) {
   const beforeProbe = parseHttpProbe(getCheckMergedOutput(data.baseline, "HTTP 探测"));
   const afterProbe = parseHttpProbe(getCheckMergedOutput(data.verify, "HTTP 探测"));
   const probeUnavailable = /HTTP_PROBE_UNAVAILABLE=1/.test(`${getCheckMergedOutput(data.baseline, "HTTP 探测")}\n${getCheckMergedOutput(data.verify, "HTTP 探测")}`);
+  const beforeMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.baseline, "资源指标"));
+  const afterMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.verify, "资源指标"));
 
   const beforeReady = countReadyPods(beforePods);
   const afterReady = countReadyPods(afterPods);
@@ -268,7 +386,7 @@ function renderK8sChaosFocusCard(data) {
   const recovered = /Successfully recover chaos|Experiment has been deleted/i.test(chaosEvidence);
   const noApplyObserved = /未观察到 Chaos 命中事件/i.test(evidence);
   const podRecreated = /Created pod:/i.test(evidence);
-  const containerStopped = /Stopping container|Killing/i.test(evidence);
+  const containerLifecycle = /Stopping container|Killing|Created container|Started container/i.test(evidence);
   const restartIncreased = afterRestart > beforeRestart;
 
   let verdict = "证据不足";
@@ -281,21 +399,28 @@ function renderK8sChaosFocusCard(data) {
   } else if (failedSelect) {
     verdict = "未命中目标";
     detail = "Chaos Mesh 没有选中目标 Pod，请检查命名空间和标签选择器。";
-  } else if (noApplyObserved && (actionKey === "k8s_network_delay" || actionKey === "k8s_network_loss")) {
+  } else if (noApplyObserved && (
+    actionKey === "k8s_network_delay" ||
+    actionKey === "k8s_network_loss" ||
+    actionKey === "k8s_cpu_stress" ||
+    actionKey === "k8s_memory_stress"
+  )) {
     verdict = "未观察到命中";
-    detail = "NetworkChaos 资源已提交，但本次实验没有在等待窗口内出现 apply chaos 事件。请展开“等待 Chaos 命中”查看 describe 详情。";
+    detail = "Chaos 资源已提交，但本次实验没有在等待窗口内出现 apply chaos 事件。请展开命中等待项查看 describe 详情。";
   } else if (actionKey === "k8s_pod_kill") {
-    success = applied && (containerStopped || podRecreated) && afterReady > 0;
+    success = applied && (containerLifecycle || podRecreated) && afterReady > 0;
     verdict = success ? "成功" : "观察中";
     detail = success
       ? "已命中目标 Pod，Deployment 已自动补齐新的 Running Pod。"
       : "需要看到 apply chaos、停止容器或新 Pod 创建事件，才算 Pod Kill 命中。";
   } else if (actionKey === "k8s_container_kill") {
-    success = applied || restartIncreased;
-    verdict = success ? "成功" : "观察中";
+    success = applied && (restartIncreased || containerLifecycle);
+    verdict = success ? "成功" : (applied ? "已命中，等待刷新" : "观察中");
     detail = success
-      ? "已观察到容器级注入命中，或 Pod 重启次数出现增加。"
-      : "已创建实验资源，但还未看到 apply chaos 或 RESTARTS 增加。";
+      ? "已观察到容器重启证据，Container Kill 注入可确认。"
+      : (applied
+        ? "Chaos Mesh 已命中实验，但还未看到 RESTARTS 增加或容器重建事件。"
+        : "需要看到 apply chaos 后，再观察 RESTARTS 或容器生命周期事件。");
   } else if (actionKey === "k8s_network_delay") {
     const delta = afterProbe.avgMs != null && beforeProbe.avgMs != null
       ? afterProbe.avgMs - beforeProbe.avgMs
@@ -314,6 +439,36 @@ function renderK8sChaosFocusCard(data) {
     detail = success
       ? `HTTP 探测失败次数增加 ${failDelta} 次，网络丢包注入可观测。`
       : "Chaos 资源已创建，但 HTTP 探测失败次数没有明显增加。";
+  } else if (actionKey === "k8s_cpu_stress") {
+    const cpuDelta = afterMetrics.rows && beforeMetrics.rows
+      ? afterMetrics.cpuMilli - beforeMetrics.cpuMilli
+      : null;
+    if (beforeMetrics.unavailable || afterMetrics.unavailable || cpuDelta === null) {
+      verdict = "指标不可用";
+      detail = "StressChaos 资源已提交，但 Kubernetes 资源指标不可用，无法确认 CPU 压力效果。";
+    } else {
+      success = applied && cpuDelta >= 100;
+      verdict = success ? "成功" : "影响不明显";
+      detail = success
+        ? `Pod CPU 用量上升 ${Math.round(cpuDelta)}m，CPU 压力注入可观测。`
+        : "已观察到 StressChaos 命中，但 Pod CPU 用量没有明显上升。";
+    }
+  } else if (actionKey === "k8s_memory_stress") {
+    const memoryDelta = afterMetrics.rows && beforeMetrics.rows
+      ? afterMetrics.memoryMi - beforeMetrics.memoryMi
+      : null;
+    const requested = Number(params.memory_mb) || 0;
+    const threshold = Math.max(16, Math.min(64, requested ? requested * 0.25 : 32));
+    if (beforeMetrics.unavailable || afterMetrics.unavailable || memoryDelta === null) {
+      verdict = "指标不可用";
+      detail = "StressChaos 资源已提交，但 Kubernetes 资源指标不可用，无法确认内存压力效果。";
+    } else {
+      success = applied && memoryDelta >= threshold;
+      verdict = success ? "成功" : "影响不明显";
+      detail = success
+        ? `Pod 内存用量上升 ${Math.round(memoryDelta)}Mi，内存压力注入可观测。`
+        : "已观察到 StressChaos 命中，但 Pod 内存用量没有明显上升。";
+    }
   } else {
     success = Boolean(data.ok && resourcePresent && afterReady > 0);
     verdict = success ? "已创建并验证" : "观察中";
@@ -327,10 +482,14 @@ function renderK8sChaosFocusCard(data) {
     afterPods ? `注入后 Pod: ${afterReady || 0} 个 Running` : "",
     actionKey === "k8s_container_kill" ? `最大重启次数: ${beforeRestart} → ${afterRestart}` : "",
     applied ? "当前实验已出现 apply chaos 事件" : "",
+    actionKey === "k8s_container_kill" && containerLifecycle ? "已出现容器 Killing/重建事件" : "",
     recovered ? "当前实验已出现 recover/delete 事件" : "",
     podRecreated ? "Deployment 已创建替换 Pod" : "",
     beforeProbe.avgMs != null ? `HTTP 平均耗时: ${beforeProbe.avgMs} → ${afterProbe.avgMs ?? "?"} ms` : "",
     beforeProbe.fail != null ? `HTTP 失败次数: ${beforeProbe.fail} → ${afterProbe.fail ?? "?"}` : "",
+    beforeMetrics.rows ? `CPU: ${Math.round(beforeMetrics.cpuMilli)} → ${afterMetrics.rows ? Math.round(afterMetrics.cpuMilli) : "?"} mCPU` : "",
+    beforeMetrics.rows ? `内存: ${Math.round(beforeMetrics.memoryMi)} → ${afterMetrics.rows ? Math.round(afterMetrics.memoryMi) : "?"} Mi` : "",
+    beforeMetrics.unavailable || afterMetrics.unavailable ? "资源指标不可用" : "",
   ].filter(Boolean);
 
   const card = elc("div", `result-focus ${success ? "focus-info" : "focus-hang"}`);
@@ -910,7 +1069,9 @@ async function runRecoveryAll() {
 //  History Entry Builders
 // ============================================================
 function buildEnhancedHistoryEntry(title, data, startedAt) {
-  const item = elc("div", `history-item ${data.ok ? "ok" : "bad"}`);
+  const measuredEffect = evaluateK8sStressEffect(data) || evaluateK8sContainerKillEffect(data);
+  const displayOk = measuredEffect ? Boolean(data.ok && measuredEffect.success) : Boolean(data.ok);
+  const item = elc("div", `history-item ${displayOk ? "ok" : "bad"}`);
 
   const header = elc("div", "history-head");
   header.innerHTML = `
@@ -918,16 +1079,16 @@ function buildEnhancedHistoryEntry(title, data, startedAt) {
       <div class="history-title">${escapeHtml(title)}</div>
       <div class="history-meta">${startedAt.toLocaleString()} | 场景: ${escapeHtml(data.key || "")}</div>
     </div>
-    <div class="history-status">${data.ok ? "成功" : "失败"}</div>
+    <div class="history-status">${displayOk ? "成功" : "失败"}</div>
   `;
 
   const body = elc("div", "history-body");
 
   // Status banner
-  const banner = elc("div", `result-banner ${data.ok ? "banner-ok" : "banner-fail"}`);
+  const banner = elc("div", `result-banner ${displayOk ? "banner-ok" : "banner-fail"}`);
   banner.innerHTML = `
-    <span class="banner-icon">${data.ok ? "✅" : "❌"}</span>
-    <span class="banner-text">${escapeHtml(title)}: ${data.ok ? "测试通过" : "测试未通过/异常"}</span>
+    <span class="banner-icon">${displayOk ? "✅" : "❌"}</span>
+    <span class="banner-text">${escapeHtml(title)}: ${displayOk ? "测试通过" : "测试未通过/异常"}</span>
   `;
   body.appendChild(banner);
 

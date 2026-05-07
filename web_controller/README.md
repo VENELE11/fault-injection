@@ -44,10 +44,10 @@ pip install -r web_controller/requirements.txt
 
 ## 运行
 ```bash
-uvicorn web_controller.app:app --host 0.0.0.0 --port 8080
+uvicorn web_controller.app:app --host 0.0.0.0 --port 8081
 ```
 
-浏览器访问：`http://<宿主机IP>:8080`
+浏览器访问：`http://<宿主机IP>:8081`
 
 ## 说明
 - 控制器运行在宿主机，Hadoop 注入通过 SSH 在 master/slave 上执行。\n+- VM/KVM 注入默认在本机执行（scope=local），需保证宿主机上已编译对应工具。

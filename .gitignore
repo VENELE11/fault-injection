@@ -37,6 +37,7 @@ kvm注入/**/modules.order
 *~
 .vscode/
 .idea/
+/.codex-staging/
 
 # Temporary files
 *.tmp
@@ -44,6 +45,7 @@ kvm注入/**/modules.order
 tmp/
 **/tmp/
 .fi_data/
+.active_faults.json
 *.sqlite
 *.sqlite3
 
@@ -55,6 +57,16 @@ __pycache__/
 # Generated preview artifacts
 output/progress_image_ppt/
 output/doc/assets/unified/_preview_grid.png
+output/doc/assets/
+output/pdf/
+output/template_work/
+*.doc
+*.docx
+*.pdf
+
+# Thesis/document generation helpers kept out of the project repo
+scripts/
+tools/
 
 # Disk fill simulation files
 **/hdfs_disk_fill
