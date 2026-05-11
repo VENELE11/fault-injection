@@ -1,76 +1,125 @@
-# 面向虚拟机内部的故障注入工具集
+# VM 用户态故障注入工具
 
-## 1. 简介
-本文件夹包含了一套基于 Linux 用户态接口（ptrace, tc, iptables 等）开发的故障注入工具。
-这些工具主要用于：
-- **虚拟机内部 (Guest OS)** 运行以模拟应用层故障
-- **宿主机 (Host OS)** 运行以针对 QEMU/KVM 进程进行干扰
+`vm_injection/` 提供运行在宿主机或 Guest OS 内的用户态注入器，同时包含当前 Web 控制器使用的 `kvm_injector`。这些工具依赖 Linux 用户态机制，如 signal、ptrace、tc、iptables、cgroup 和 `/proc`。
 
-> **注意**: Hadoop 和 CloudStack 的故障注入工具已移至 `kvm注入/` 目录，请参考该目录下的 README.md。
-
-### 1.1 适用环境
-- 操作系统: Ubuntu 24.04 (支持ARM64/x86_64)
-- 虚拟化: UTM (Mac ARM) / QEMU-KVM
-
-## 2. 工具列表与功能
-
-### 2.1 核心注入器
-
-| 工具文件             | 编译后名称         | 功能描述                                                                              |
-| :------------------- | :----------------- | :------------------------------------------------------------------------------------ |
-| `cpu_injector.c`     | `cpu_injector`     | **CPU 高负载注入**。创建多线程执行密集浮点运算，争抢 CPU 时间片。                     |
-| `mem_injector.c`     | `mem_injector`     | **内存数据错误注入**。精准修改目标进程堆栈数据（位翻转、置0/1）。支持特征值扫描模式。 |
-| `memleak_injector.c` | `mem_leak`         | **内存泄漏/耗尽注入**。持续申请并写入内存，模拟 OOM (Out Of Memory) 环境。            |
-| `network_injector.c` | `network_injector` | **网络故障注入**。模拟网络延迟、丢包、连接中断。                                      |
-| `process_injector.c` | `process_injector` | **进程状态注入**。让进程崩溃、挂起（假死）或恢复。                                    |
-| `reg_injector.c`     | `reg_injector`     | **寄存器故障注入 (ARM64)**。修改目标进程的通用寄存器或 PC/SP 指针。                   |
-
-### 2.2 控制器与辅助脚本
-*   `fault_controller.c`: 一个集成控制器，封装了上述注入器的调用接口。
-*   `run_cluster.sh`: QEMU虚拟机启动脚本（用于UTM环境）。
-*   `start_kvm.sh`: KVM虚拟机启动脚本。
-*   `target*.c`: 系列测试靶子程序，用于验证故障注入是否生效。
-
-## 3. 编译指南
-
-请在当前目录下执行以下命令编译所有工具：
+## 1. 编译
 
 ```bash
-# 使用 Makefile 一键编译
+cd /Users/venele/Downloads/fault-injection/vm_injection
 make all
-
-# 或者只编译基础工具
-make basic
-
-# 编译测试靶子
-make test
 ```
 
-## 4. 详细使用说明
+编译目标：
 
-### 4.1 CPU 负载注入
+| 目标 | 源码 | 功能 |
+| --- | --- | --- |
+| `process_injector` | `process_injector.c` | 按进程名执行 `SIGKILL`、`SIGSTOP`、`SIGCONT` |
+| `network_injector` | `network_injector.c` | delay、loss、partition、corrupt、clear |
+| `cpu_injector` | `cpu_injector.c` | CPU 压力，支持线程数和模式 |
+| `mem_leak` | `memleak_injector.c` | 持续占用指定 MB 内存 |
+| `mem_injector` | `mem_injector.c` | ptrace 修改目标进程 heap/stack 或指定地址 |
+| `reg_injector` | `reg_injector.c` | ARM64 寄存器故障注入 |
+| `fault_controller` | `fault_controller.c` | 交互式用户态控制器 |
+| `kvm_injector` | `kvm_injector.c` | KVM 用户态故障入口 |
+| `target_*` | `靶子程序/` | 注入验证靶子程序 |
+
+## 2. 进程注入
+
 ```bash
-./cpu_injector 0 10 4
-# 启动 4 个线程，持续 10 秒的 CPU 高负载
+sudo ./process_injector nginx 1  # crash
+sudo ./process_injector nginx 2  # hang
+sudo ./process_injector nginx 3  # resume
 ```
 
-### 4.2 网络故障
+参数：`<process_name> <action_type 1|2|3>`。
+
+## 3. 网络注入
+
 ```bash
-sudo ./network_injector 1 100ms  # 注入 100ms 延迟
-sudo ./network_injector 2 10%    # 注入 10% 丢包
-sudo ./network_injector 0        # 清理故障
+sudo ./network_injector 1 200ms  # delay
+sudo ./network_injector 2 10%    # loss
+sudo ./network_injector 3 8080   # partition, 封锁 TCP 目的端口
+sudo ./network_injector 4 1%     # corrupt
+sudo ./network_injector 0        # clear
 ```
 
-### 4.3 进程控制
+工具会自动选择默认出网网卡，并在每次注入前清理已有 `tc root qdisc` 和 OUTPUT 链中的封锁规则。
+
+## 4. CPU 与内存压力
+
 ```bash
-sudo ./process_injector nginx 1  # 终止进程
-sudo ./process_injector nginx 2  # 暂停进程
-sudo ./process_injector nginx 3  # 恢复进程
+sudo ./cpu_injector 0 20 4
+sudo ./mem_leak 0 512
 ```
 
-## 5. Hadoop/CloudStack 故障注入
+`cpu_injector` 参数是 `<PID> <Duration_Sec> [Threads] [Mode]`。PID 为 0 表示全局压力，不绑定某个目标进程。
 
-Hadoop 和 CloudStack 的故障注入工具已移至 `kvm注入/` 目录。请参考：
-- `kvm注入/hadoop-fi/` - Hadoop 集群故障注入
-- `kvm注入/cloudstack-fi/` - CloudStack 云平台故障注入
-- `kvm注入/README.md` - 详细使用说明
+`mem_leak` 参数是 `<PID_ignored> <Size_MB>`。
+
+## 5. 内存篡改
+
+```bash
+sudo ./mem_injector -p 1234 -r heap -t flip -b 0
+sudo ./mem_injector -p 1234 -r stack -t set0 -b 7
+sudo ./mem_injector -p 1234 -a 0x7fff0000 -t byte -b 0
+sudo ./mem_injector -p 1234 -r heap -s deadbeef -t flip -b 3
+```
+
+常用参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `-p` | 目标 PID |
+| `-r` | 区域，`heap` 或 `stack` |
+| `-a` | 手动地址 |
+| `-s` | 十六进制特征值扫描 |
+| `-t` | `flip`、`set0`、`set1`、`byte` |
+| `-b` | 目标位 |
+
+## 6. 寄存器注入
+
+```bash
+sudo ./reg_injector 1234 X0 flip1 0
+sudo ./reg_injector 1234 PC invalidpc
+sudo ./reg_injector 1234 X0 zeroall
+sudo ./reg_injector 1234 SP add1 -1 -w 500
+```
+
+Web 控制器主要使用 `pid reg reg_type bit`，并支持延迟、循环和间隔参数。
+
+## 7. KVM 用户态入口
+
+`kvm_injector` 当前也在本目录编译：
+
+```bash
+sudo ./kvm_injector list
+sudo ./kvm_injector soft-flip master PC 10
+sudo ./kvm_injector soft-swap slave1 X0
+sudo ./kvm_injector soft-zero slave2 SP 0
+sudo ./kvm_injector guest-divzero master
+sudo ./kvm_injector perf-delay slave1 50
+sudo ./kvm_injector perf-stress slave1 20 4
+sudo ./kvm_injector cpu-offline 2
+sudo ./kvm_injector clear
+```
+
+更多 KVM 内核模块实验见 `kvm_injection/README.md` 和 `kvm_injection/kvm测试方法.md`。
+
+## 8. Web 控制器映射
+
+`web_controller/app.py` 中的 VM group 会调用本目录二进制：
+
+- `vm_process` -> `process_injector`
+- `vm_network` -> `network_injector`
+- `vm_cpu` -> `cpu_injector`
+- `vm_mem_leak` -> `mem_leak`
+- `vm_mem_inject` -> `mem_injector`
+- `vm_reg_inject` -> `reg_injector`
+- `kvm_*` -> `kvm_injector`
+
+## 9. 风险提示
+
+- `ptrace` 和寄存器注入可能直接让目标进程崩溃。
+- `network_injector 0` 会清理默认网卡 qdisc，并 flush OUTPUT 链，实验机上使用。
+- `mem_leak` 可能触发 OOM。
+- KVM 操作可能影响正在运行的虚拟机。

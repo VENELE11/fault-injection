@@ -69,6 +69,12 @@ CLOUDSTACK_STATUS_CMD = (
     "if [ -s /tmp/cloudstack_network_isolate ]; then echo \"cloudstack-network-isolate $(cat /tmp/cloudstack_network_isolate)\"; fi"
 )
 
+KVM_QEMU_STATUS_CMD = (
+    "ps -ww -eo pid=,args= | grep -E '[q]emu-system|[q]emu-kvm' | "
+    "grep -E -- '(-name(=| )[^ ]*(guest=)?(ubuntu_|alpine_|kvm_|vm_)?{target}([, ]|$)|"
+    "(node_|ubuntu_|alpine_|kvm_|vm_){target}\\.qcow2)' | head -3 || echo '虚拟机未运行'"
+)
+
 # ---------------------------------------------------------------------------
 # Test scenario structure
 # ---------------------------------------------------------------------------
@@ -329,15 +335,17 @@ FUNC_TESTS: List[Dict[str, Any]] = [
         ],
         "baseline": [
             {"title": "注入前 loadavg", "cmd": "cat /proc/loadavg", "scope": "local"},
-            {"title": "注入前 CPU 占用前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | head -5", "scope": "local"},
+            {"title": "注入前 CPU 占用前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -5", "scope": "local"},
         ],
         "action": "vm_cpu",
         "action_params": {"pid": 0, "duration": 12, "cpu_mode": "2"},
         "verify": [
             {"title": "注入后 loadavg", "cmd": "cat /proc/loadavg", "scope": "local"},
-            {"title": "注入后 CPU 占用前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | head -5", "scope": "local"},
+            {"title": "注入后 CPU 占用前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -5", "scope": "local"},
+            {"title": "CPU 压力进程", "cmd": "pidfile=/tmp/fi_vm_cpu_stress.pid; if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"; else echo 'cpu_stress_not_running'; fi", "scope": "local"},
+            {"title": "CPU 压力日志", "cmd": "if [ -s /tmp/fi_vm_cpu_stress.log ]; then tail -80 /tmp/fi_vm_cpu_stress.log; else echo 'cpu_stress_log_missing_or_empty'; fi", "scope": "local"},
         ],
-        "cleanup": None,
+        "cleanup": "vm_cpu_clear",
     },
     {
         "key": "test_mem_stress",
@@ -357,7 +365,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             {"title": "注入后内存概览", "cmd": "free -m | head -2", "scope": "local"},
             {"title": "注入后 mem_leak 进程", "cmd": "pgrep -af 'mem_leak' | head -n 5 || echo 'mem_leak_not_running'", "scope": "local"},
         ],
-        "cleanup": None,
+        "cleanup": "vm_mem_leak_clear",
     },
     {
         "key": "test_disk_fill",
@@ -662,17 +670,18 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             {"name": "threads", "label": "线程数 (0=全核)", "type": "number", "default": 0, "required": False},
         ],
         "baseline": [
-            {"title": "压力前 CPU 前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | head -5", "scope": "local"},
+            {"title": "压力前 CPU 前 5", "cmd": "ps -eo pid,pcpu,comm --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -5", "scope": "local"},
             {"title": "压力前负载", "cmd": "cat /proc/loadavg 2>/dev/null || uptime", "scope": "local"},
         ],
         "action": "vm_cpu",
         "action_params": {"pid": 0, "duration": 20, "threads": 0, "cpu_mode": "2"},
         "verify": [
-            {"title": "压力中 CPU 连续采样", "cmd": "for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -eo pid,pcpu,comm,args --sort=-pcpu | head -8; sleep 1; done", "scope": "local", "timeout": 12},
+            {"title": "压力中 CPU 连续采样", "cmd": "for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -eo pid,pcpu,comm,args --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -8; sleep 1; done", "scope": "local", "timeout": 12},
             {"title": "压力中负载", "cmd": "cat /proc/loadavg 2>/dev/null || uptime", "scope": "local"},
+            {"title": "CPU 压力进程", "cmd": "pidfile=/tmp/fi_vm_cpu_stress.pid; if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"; else echo 'cpu_stress_not_running'; fi", "scope": "local"},
             {"title": "CPU 压力日志", "cmd": "if [ -s /tmp/fi_vm_cpu_stress.log ]; then tail -80 /tmp/fi_vm_cpu_stress.log; else echo 'cpu_stress_log_missing_or_empty'; fi", "scope": "local"},
         ],
-        "cleanup": None,
+        "cleanup": "vm_cpu_clear",
     },
     {
         "key": "test_vm_mem_leak",
@@ -686,7 +695,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             {"title": "泄漏前内存", "cmd": "free -m | head -2", "scope": "local"},
         ],
         "action": "vm_mem_leak",
-        "action_params": {},
+        "action_params": {"size_mb": 512},
         "verify": [
             {"title": "泄漏后内存", "cmd": "free -m | head -2", "scope": "local"},
             {"title": "内存泄漏进程", "cmd": "pidfile=/tmp/fi_vm_mem_leak.pid; if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"; else echo 'mem_leak_not_running'; fi", "scope": "local"},
@@ -697,7 +706,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
                 "timeout": 12,
             },
         ],
-        "cleanup": None,
+        "cleanup": "vm_mem_leak_clear",
     },
     {
         "key": "test_vm_mem_inject",
@@ -799,14 +808,14 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             },
         ],
         "baseline": [
-            {"title": "注入前目标虚拟机", "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'", "scope": "local"},
+            {"title": "注入前目标虚拟机", "cmd": KVM_QEMU_STATUS_CMD, "scope": "local"},
         ],
         "action": "kvm_soft",
         "action_params": {},
         "verify": [
             {
                 "title": "注入后目标虚拟机仍在运行",
-                "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'",
+                "cmd": KVM_QEMU_STATUS_CMD,
                 "scope": "local",
             },
         ],
@@ -824,7 +833,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             {"name": "rounds", "label": "轮数", "type": "number", "default": 1, "required": True},
         ],
         "baseline": [
-            {"title": "延迟前目标虚拟机", "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'", "scope": "local"},
+            {"title": "延迟前目标虚拟机", "cmd": KVM_QEMU_STATUS_CMD, "scope": "local"},
             {
                 "title": "延迟前任务速度 (VM 内 CPU+dd)",
                 "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p '{kvm_guest_password}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" {kvm_guest_user}@127.0.0.1 'set -e; rm -f /tmp/fi_kvm_bench; i=1; while [ \"$i\" -le {rounds} ]; do echo ROUND_${{i}}_CPU_HASH_START; dd if=/dev/zero bs=1M count={bench_mb} 2>/tmp/fi_kvm_cpu_dd.log | sha256sum; cat /tmp/fi_kvm_cpu_dd.log; rm -f /tmp/fi_kvm_cpu_dd.log; echo ROUND_${{i}}_DISK_WRITE_START; dd if=/dev/zero of=/tmp/fi_kvm_bench bs=1M count={bench_mb} 2>&1; sync; echo ROUND_${{i}}_DISK_READ_START; dd if=/tmp/fi_kvm_bench of=/dev/null bs=1M 2>&1; i=$((i+1)); done; rm -f /tmp/fi_kvm_bench'",
@@ -835,7 +844,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
         "action": "kvm_perf_delay",
         "action_params": {},
         "verify": [
-            {"title": "延迟后目标虚拟机", "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'", "scope": "local"},
+            {"title": "延迟后目标虚拟机", "cmd": KVM_QEMU_STATUS_CMD, "scope": "local"},
             {
                 "title": "延迟后任务速度 (VM 内 CPU+dd)",
                 "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p '{kvm_guest_password}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" {kvm_guest_user}@127.0.0.1 'set -e; rm -f /tmp/fi_kvm_bench; i=1; while [ \"$i\" -le {rounds} ]; do echo ROUND_${{i}}_CPU_HASH_START; dd if=/dev/zero bs=1M count={bench_mb} 2>/tmp/fi_kvm_cpu_dd.log | sha256sum; cat /tmp/fi_kvm_cpu_dd.log; rm -f /tmp/fi_kvm_cpu_dd.log; echo ROUND_${{i}}_DISK_WRITE_START; dd if=/dev/zero of=/tmp/fi_kvm_bench bs=1M count={bench_mb} 2>&1; sync; echo ROUND_${{i}}_DISK_READ_START; dd if=/tmp/fi_kvm_bench of=/dev/null bs=1M 2>&1; i=$((i+1)); done; rm -f /tmp/fi_kvm_bench'",
@@ -920,7 +929,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
         "baseline": [
             {
                 "title": "恢复前目标虚拟机",
-                "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'",
+                "cmd": KVM_QEMU_STATUS_CMD,
                 "scope": "local",
             },
         ],
@@ -929,7 +938,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
         "verify": [
             {
                 "title": "恢复后目标虚拟机",
-                "cmd": "ps -ef | grep -E 'qemu-system|qemu-kvm' | grep 'alpine_{target}' | grep -v grep | head -3 || echo '虚拟机未运行'",
+                "cmd": KVM_QEMU_STATUS_CMD,
                 "scope": "local",
             },
         ],
@@ -1136,6 +1145,13 @@ K8S_STRESS_VERIFY = [
     {"title": "注入后 Pod 状态", "cmd": K8S_TARGET_PODS_CMD, "scope": "local", "timeout": 20},
 ]
 
+K8S_MEMORY_STRESS_VERIFY = [
+    {"title": "等待 StressChaos 命中", "cmd": K8S_WAIT_STRESS_CHAOS_APPLIED_CMD, "scope": "local", "timeout": 40},
+    {"title": "Chaos 实验资源", "cmd": "{kubectl} get podchaos,networkchaos,stresschaos -n {namespace} 2>/dev/null || true", "scope": "local", "timeout": 20},
+    {"title": "最近事件", "cmd": "{kubectl} get events -n {namespace} --sort-by=.lastTimestamp | tail -n 40", "scope": "local", "timeout": 20},
+    {"title": "注入后 Pod 状态", "cmd": K8S_TARGET_PODS_CMD, "scope": "local", "timeout": 20},
+]
+
 K8S_DEMO_TARGET_PARAMS = {
     "namespace": "default",
     "label_key": "app",
@@ -1253,7 +1269,7 @@ FUNC_TESTS = [
             {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 30, "required": True},
         ],
         "require_baseline": True,
-        "baseline": K8S_RESOURCE_BASELINE,
+        "baseline": K8S_BASELINE,
         "action": "k8s_memory_stress",
         "action_params": {
             **K8S_DEMO_TARGET_PARAMS,
@@ -1261,7 +1277,7 @@ FUNC_TESTS = [
             "chaos_mode": "one",
             "workers": 1,
         },
-        "verify": K8S_STRESS_VERIFY,
+        "verify": K8S_MEMORY_STRESS_VERIFY,
         "cleanup": "k8s_chaos_clear",
         "cleanup_params": {"chaos_kind": "stresschaos"},
     },

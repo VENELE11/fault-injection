@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>注入历史 - 云平台故障注入工具</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260508history2" />
+</head>
+
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-left">
+        <div class="badge">Fault Injection History</div>
+        <h1>注入历史</h1>
+        <p class="hero-sub">查看数据库中保存的历史注入、功能测试和清理记录。</p>
+      </div>
+      <div class="hero-right">
+        <button class="ghost" id="backToConsole">返回控制台</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>数据库历史</h2>
+          <p>持久化记录来自 SQLite 数据库，不会混入当前控制台的本次会话记录。</p>
+        </div>
+        <div class="panel-actions history-toolbar">
+          <label class="history-filter">
+            <span>类型</span>
+            <select id="runTypeFilter">
+              <option value="">全部</option>
+              <option value="functest">功能测试</option>
+              <option value="action">单次动作</option>
+              <option value="cleanup">清理动作</option>
+            </select>
+          </label>
+          <button class="ghost" id="refreshHistory">刷新</button>
+          <button class="ghost danger-text" id="clearDbHistory">清空数据库历史</button>
+        </div>
+      </div>
+      <div class="history-summary" id="historySummary">加载中...</div>
+      <div class="history" id="historyList"></div>
+    </section>
+  </div>
+
+  <script src="/static/history.js?v=20260508history2"></script>
+</body>
+
+</html>

@@ -1,186 +1,162 @@
-- # **CloudStack Injector 模拟环境故障注入验证**
+# CloudStack Injector 测试说明
 
-  ## **一、概览**
+本文档与 `kvm_injection/cloudstack-fi/cloudstack_injector.c` 当前命令表对齐，保留 CloudStack 管理面、Agent、SystemVM、网络、存储、数据库和资源故障说明。
 
-  **目的**：在无法启动真实 CloudStack 的情况下，使用模拟进程与虚拟机环境，系统性验证 cloudstack_injector 的各类故障注入能力，覆盖管理节点、Agent、系统虚拟机、网络、存储及数据库等关键组件。
+## 1. 工具位置
 
-  **已验证功能总览**：
+```bash
+cd /Users/venele/Downloads/fault-injection/kvm_injection/cloudstack-fi
+make
+sudo ./cloudstack_injector --help
+```
 
-  - 进程类：list / hang / resume / crash
-  - 资源类：cpu-stress / mem-stress
-  - 网络类：api-delay / network / network-clear / agent-disconnect
-  - 虚拟机类：sysvm-crash / vm-migrate-fail
-  - 存储类：storage-ro / storage-fill
-  - 数据库类：db-lock
+大部分功能需要 root 权限，因为会操作进程信号、iptables、tc、存储挂载、cgroup 或数据库命令。
 
-  ## **二、模拟环境与启动方式**
+## 2. 支持命令
 
-  ### **1. 管理组件进程模拟（Mac / Linux 通用）**
+| 类别 | 命令 |
+| --- | --- |
+| 进程 | `list`、`crash <组件>`、`hang <组件>`、`resume <组件>` |
+| SystemVM | `sysvm-crash <ssvm|cpvm|vr>`、`sysvm-hang <ssvm|cpvm|vr>`、`sysvm-resume <ssvm|cpvm|vr>` |
+| 网络 | `api-delay <ms>`、`api-delay-clear`、`network <IP> [port]`、`network-clear <IP>`、`agent-disconnect [IP]`、`agent-reconnect [IP]` |
+| 存储 | `storage-umount <path>`、`storage-ro <path>`、`storage-rw <path>`、`storage-fill <path>`、`storage-clean <path>` |
+| 数据库 | `db-limit`、`db-restore`、`db-lock`、`db-unlock` |
+| 资源 | `cpu-stress <seconds> [threads]`、`mem-stress <MB>`、`mem-stress-clear` |
+| VM 操作 | `vm-create-fail`、`vm-migrate-fail`、`vm-op-clear` |
 
-  ```
-  # 模拟 Management Server / Agent / MySQL
-  exec -a cloudstack-management sleep 10000 &
-  exec -a cloudstack-agent sleep 10000 &
-  exec -a mysqld sleep 10000 &
-  ```
+组件代号：
 
-  ### **2. 系统虚拟机模拟（用于 VM / SysVM 故障测试）**
+| 代号 | 组件 |
+| --- | --- |
+| `ms` | Management Server |
+| `agent` | CloudStack Agent |
+| `usage` | Usage Server |
+| `mysql` | MySQL |
+| `nfs` | NFS |
+| `libvirt` | Libvirt |
+| `ssvm` | Secondary Storage VM |
+| `cpvm` | Console Proxy VM |
+| `vr` | Virtual Router |
 
-  ```
-  # 二级存储虚拟机（SSVM）
-  exec -a "qemu-system-x86_64 -name guest=s-1-VM" sleep 10000 &
-  
-  # 控制台代理虚拟机（CPVM）
-  exec -a "qemu-system-x86_64 -name guest=v-2-VM" sleep 10000 &
-  
-  # 虚拟路由器（VR）
-  exec -a "qemu-system-x86_64 -name guest=r-3-VM" sleep 10000 &
-  ```
+## 3. 模拟环境
 
-  ### **3. API 服务模拟（Ubuntu VM）**
+如果没有真实 CloudStack，可用模拟进程验证注入器逻辑：
 
-  ```
-  pkill -f "python3 -m http.server 8080"
-  python3 -m http.server 8080 --bind 0.0.0.0 &
-  ```
+```bash
+exec -a cloudstack-management sleep 10000 &
+exec -a cloudstack-agent sleep 10000 &
+exec -a cloudstack-usage sleep 10000 &
+exec -a mysqld sleep 10000 &
 
-  ## **三、常用诊断与排查命令**
+exec -a "qemu-system-x86_64 -name guest=s-1-VM systemvm" sleep 10000 &
+exec -a "qemu-system-x86_64 -name guest=v-2-VM consoleproxy" sleep 10000 &
+exec -a "qemu-system-x86_64 -name guest=r-3-VM router" sleep 10000 &
+```
 
-  ```
-  # 进程
-  pgrep -f cloudstack-management
-  pgrep -f cloudstack-agent
-  
-  # 端口
-  ss -tlnp | grep 8080
-  
-  # 路由 / 默认网卡
-  ip route get 8.8.8.8
-  
-  # tc 规则
-  tc qdisc show dev enp0s1
-  tc filter show dev enp0s1
-  sudo tc qdisc del dev enp0s1 root 2>/dev/null
-  
-  # iptables
-  sudo iptables -L -n -v
-  
-  # 连通性测试
-  ping -c 2 8.8.8.8
-  time curl http://192.168.64.4:8080/
-  ```
+API 延迟测试可启动本地 HTTP 服务：
 
-  ## **四、核心测试用例与结果**
+```bash
+python3 -m http.server 8080 --bind 0.0.0.0 &
+```
 
-  ### **1）组件列表检测（list）**
+## 4. 核心测试用例
 
-  ```
-  sudo ./cloudstack_injector list
-  ```
+### 4.1 服务状态
 
-  **结果**：可正确识别 Management / Agent / MySQL 及 API 监听端口。
+```bash
+sudo ./cloudstack_injector list
+```
 
-  ### **2）Agent 挂起与恢复（hang / resume）**
+预期：列出 Management、Agent、Usage、MySQL、NFS、Libvirt、SystemVM 等可识别组件状态。
 
-  ```
-  sudo ./cloudstack_injector hang agent
-  sudo ./cloudstack_injector resume agent
-  ```
+### 4.2 组件挂起、恢复、崩溃
 
-  **结果**：Agent 进程状态 S ↔ T 正常切换。
+```bash
+sudo ./cloudstack_injector hang agent
+ps -o pid,stat,comm,args -p "$(pgrep -f cloudstack-agent | head -n 1)"
+sudo ./cloudstack_injector resume agent
+sudo ./cloudstack_injector crash ms
+```
 
-  ### **3）Management Server 崩溃（crash ms）**
+预期：`hang` 后进程状态包含 `T`，`resume` 后恢复，`crash` 终止目标进程。
 
-  ```
-  sudo ./cloudstack_injector crash ms
-  ```
+### 4.3 API 延迟
 
-  **结果**：Management 进程被 SIGKILL 成功终止。
+```bash
+sudo ./cloudstack_injector api-delay 1000
+time curl http://127.0.0.1:8080/
+sudo ./cloudstack_injector api-delay-clear
+```
 
-  ### **4）CPU 压力注入（cpu-stress）**
+实现使用 `tc` 对 API 端口响应流量注入延迟。默认 API 端口为 8080。
 
-  ```
-  sudo ./cloudstack_injector cpu-stress 5 2
-  ```
+### 4.4 网络隔离与 Agent 断连
 
-  **结果**：CPU 使用率显著上升，结束后自动恢复。
+```bash
+sudo ./cloudstack_injector network 192.168.1.11 8250
+sudo ./cloudstack_injector network-clear 192.168.1.11
 
-  ### **5）API 延迟注入（api-delay）**
+sudo ./cloudstack_injector agent-disconnect 192.168.1.11
+sudo ./cloudstack_injector agent-reconnect 192.168.1.11
+```
 
-  ```
-  sudo ./cloudstack_injector api-delay 5000
-  time curl http://192.168.64.4:8080/
-  ```
+预期：iptables 规则阻断指定 IP 或 Agent 端口通信。
 
-  **实现要点**：
+### 4.5 存储故障
 
-  - 延迟作用于 **响应流量**
-  - tc filter 使用 match ip sport 8080
+```bash
+mkdir -p /tmp/cs_secondary
+sudo ./cloudstack_injector storage-ro /tmp/cs_secondary
+sudo ./cloudstack_injector storage-rw /tmp/cs_secondary
+sudo ./cloudstack_injector storage-fill /tmp/cs_secondary
+sudo ./cloudstack_injector storage-clean /tmp/cs_secondary
+```
 
-  **结果**：API 响应延迟约 5–6 秒，注入生效。
+预期：只读、磁盘填充和清理动作按命令生效。真实挂载点上操作前请确认可恢复。
 
-  ### **6）Agent 通信中断（agent-disconnect）**
+### 4.6 数据库故障
 
-  ```
-  sudo ./cloudstack_injector agent-disconnect
-  sudo ./cloudstack_injector agent-reconnect
-  ```
+```bash
+sudo ./cloudstack_injector db-limit
+sudo ./cloudstack_injector db-restore
+sudo ./cloudstack_injector db-lock
+sudo ./cloudstack_injector db-unlock
+```
 
-  **结果**：成功阻断 / 恢复 Agent → Management 的 8250 端口通信。
+无真实数据库时可能返回连接错误，但可验证命令分支和错误处理。
 
-  ### **7）内存压力测试（mem-stress）**
+### 4.7 资源与 VM 操作故障
 
-  ```
-  sudo ./cloudstack_injector mem-stress 200
-  sudo ./cloudstack_injector mem-stress-clear
-  ```
+```bash
+sudo ./cloudstack_injector cpu-stress 10 2
+sudo ./cloudstack_injector mem-stress 200
+sudo ./cloudstack_injector mem-stress-clear
 
-  **结果**：系统可用内存下降约 200MB，清理后恢复。
+sudo ./cloudstack_injector vm-create-fail
+sudo ./cloudstack_injector vm-migrate-fail
+sudo ./cloudstack_injector vm-op-clear
+```
 
-  ### **8）虚拟机迁移失败模拟（vm-migrate-fail）**
+## 5. Web 控制器中的 CloudStack
 
-  ```
-  sudo ./cloudstack_injector vm-migrate-fail
-  sudo ./cloudstack_injector vm-op-clear
-  ```
+`web_controller/app.py` 保留 CloudStack 单次动作：服务状态、组件进程控制、API 延迟、网络隔离和清理。当前 CLI 注入器使用 `network` / `network-clear` 作为网络命令名；如果 Web 动作使用的命令名与本地二进制不一致，请以 `cloudstack_injector --help` 为准并同步更新 `web_controller/app.py`。
 
-  **结果**：通过高延迟 + 丢包网络条件阻断迁移流程。
+## 6. 诊断命令
 
-  ### **9）存储只读故障（storage-ro）**
+```bash
+pgrep -af 'cloudstack|mysqld|systemvm|consoleproxy|router'
+ss -tlnp | grep -E '8080|8250|3306'
+ip route get 8.8.8.8
+tc qdisc show
+sudo iptables -L -n -v
+```
 
-  ```
-  sudo ./cloudstack_injector storage-ro /tmp/cs_secondary
-  sudo ./cloudstack_injector storage-rw /tmp/cs_secondary
-  ```
+## 7. 清理
 
-  **结果**：挂载点变为只读，写入失败，恢复正常。
-
-  ### **10）存储空间耗尽（storage-fill）**
-
-  ```
-  sudo ./cloudstack_injector storage-fill /tmp/cs_secondary
-  sudo ./cloudstack_injector storage-clean /tmp/cs_secondary
-  ```
-
-  **结果**：成功制造磁盘满场景并清理。
-
-  ### **11）数据库锁故障（db-lock）**
-
-  ```
-  sudo ./cloudstack_injector db-lock
-  sudo ./cloudstack_injector db-unlock
-  ```
-
-  **结果**：工具正确尝试下发 LOCK TABLES，无真实 DB 环境下返回连接错误，逻辑验证通过。
-
-  ### **12）系统虚拟机崩溃（sysvm-crash）**
-
-  ```
-  sudo ./cloudstack_injector crash ssvm
-  ```
-
-  **结果**：模拟的 SSVM 进程被成功终止，验证 SysVM 识别与故障注入能力。
-
-  ## **五、结论**
-
-  在无真实 CloudStack 环境下，通过进程级、网络级、存储级与资源级模拟，cloudstack_injector 已验证具备覆盖核心故障场景的能力，可作为 Chaos / 故障演练的基础工具。
+```bash
+sudo ./cloudstack_injector api-delay-clear
+sudo ./cloudstack_injector agent-reconnect
+sudo ./cloudstack_injector mem-stress-clear
+sudo ./cloudstack_injector vm-op-clear
+sudo iptables -F
+```

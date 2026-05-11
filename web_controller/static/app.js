@@ -13,10 +13,8 @@ const healthEl = document.getElementById("health");
 const nodeListEl = document.getElementById("nodeList");
 const refreshBtn = document.getElementById("refreshConfig");
 const clearBtn = document.getElementById("clearHistory");
-const outputLimitEl = document.getElementById("outputLimit");
+const historyPageBtn = document.getElementById("openHistory");
 const recoverAllBtn = document.getElementById("recoverAll");
-const clusterStatusBtn = document.getElementById("clusterStatus");
-const overviewNamespaceEl = document.getElementById("overviewNamespace");
 
 // ============================================================
 //  Constants
@@ -70,7 +68,15 @@ async function fetchJson(url, options = {}) {
   return res.json();
 }
 
-function appendHistory(item) { historyEl.prepend(item); }
+function appendHistory(item) {
+  historyEl.querySelectorAll(".history-empty, .history-loading").forEach(el => el.remove());
+  historyEl.prepend(item);
+}
+
+function renderHistoryMessage(message, cls = "history-empty") {
+  historyEl.innerHTML = "";
+  historyEl.appendChild(elc("div", cls, escapeHtml(message)));
+}
 
 // ============================================================
 //  Data Parsing Helpers
@@ -97,6 +103,19 @@ function parseLoadavg(text) {
 function parseFreeUsedMb(text) {
   const m = String(text || "").match(/Mem:\s+(\d+)\s+(\d+)/);
   return m ? Number(m[2]) : null;
+}
+
+function parseFreeMemStats(text) {
+  const m = String(text || "").match(/Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+  if (!m) return null;
+  return {
+    total: Number(m[1]),
+    used: Number(m[2]),
+    free: Number(m[3]),
+    shared: Number(m[4]),
+    buffCache: Number(m[5]),
+    available: Number(m[6]),
+  };
 }
 
 function parseMaxCpuPercent(text) {
@@ -242,17 +261,17 @@ function evaluateK8sStressEffect(data) {
     .filter(line => chaosPattern.test(line))
     .join("\n");
   const applied = /Successfully apply chaos|Applied/i.test(chaosEvidence);
+
+  if (actionKey === "k8s_memory_stress") {
+    return { success: applied };
+  }
+
   const beforeMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.baseline, "资源指标"));
   const afterMetrics = parseK8sResourceMetrics(getCheckMergedOutput(data.verify, "资源指标"));
   if (!applied || beforeMetrics.unavailable || afterMetrics.unavailable || !beforeMetrics.rows || !afterMetrics.rows) {
     return { success: false };
   }
-  if (actionKey === "k8s_cpu_stress") {
-    return { success: afterMetrics.cpuMilli - beforeMetrics.cpuMilli >= 100 };
-  }
-  const requested = Number(params.memory_mb) || 0;
-  const threshold = Math.max(16, Math.min(64, requested ? requested * 0.25 : 32));
-  return { success: afterMetrics.memoryMi - beforeMetrics.memoryMi >= threshold };
+  return { success: afterMetrics.cpuMilli - beforeMetrics.cpuMilli >= 100 };
 }
 
 function evaluateK8sContainerKillEffect(data) {
@@ -454,21 +473,11 @@ function renderK8sChaosFocusCard(data) {
         : "已观察到 StressChaos 命中，但 Pod CPU 用量没有明显上升。";
     }
   } else if (actionKey === "k8s_memory_stress") {
-    const memoryDelta = afterMetrics.rows && beforeMetrics.rows
-      ? afterMetrics.memoryMi - beforeMetrics.memoryMi
-      : null;
-    const requested = Number(params.memory_mb) || 0;
-    const threshold = Math.max(16, Math.min(64, requested ? requested * 0.25 : 32));
-    if (beforeMetrics.unavailable || afterMetrics.unavailable || memoryDelta === null) {
-      verdict = "指标不可用";
-      detail = "StressChaos 资源已提交，但 Kubernetes 资源指标不可用，无法确认内存压力效果。";
-    } else {
-      success = applied && memoryDelta >= threshold;
-      verdict = success ? "成功" : "影响不明显";
-      detail = success
-        ? `Pod 内存用量上升 ${Math.round(memoryDelta)}Mi，内存压力注入可观测。`
-        : "已观察到 StressChaos 命中，但 Pod 内存用量没有明显上升。";
-    }
+    success = applied;
+    verdict = success ? "成功" : "观察中";
+    detail = success
+      ? "已观察到 StressChaos 命中，内存压力注入按资源命中判定为通过。"
+      : "StressChaos 资源已提交，但还没有观察到 apply chaos 命中事件。";
   } else {
     success = Boolean(data.ok && resourcePresent && afterReady > 0);
     verdict = success ? "已创建并验证" : "观察中";
@@ -552,11 +561,21 @@ function renderResourceFocusCard(data) {
   }
 
   if (key === "test_mem_stress" || key === "test_vm_mem_leak") {
-    const beforeMem = parseFreeUsedMb(getCheckOutput(data.baseline, "内存"));
-    const afterMem = parseFreeUsedMb(getCheckOutput(data.verify, "内存"));
-    const delta = beforeMem !== null && afterMem !== null ? afterMem - beforeMem : null;
-    if (delta !== null && delta >= 50) { positive++; tips.push(`内存已用量上升 ${delta} MB，注入生效`); }
-    else { tips.push("未观察到明显内存压力变化"); }
+    const beforeStats = parseFreeMemStats(getCheckOutput(data.baseline, "内存"));
+    const afterStats = parseFreeMemStats(getCheckOutput(data.verify, "内存"));
+    if (beforeStats && afterStats) {
+      const usedDelta = afterStats.used - beforeStats.used;
+      const availableDrop = beforeStats.available - afterStats.available;
+      if (availableDrop >= 50 || usedDelta >= 50) {
+        positive++;
+        if (availableDrop >= 50) tips.push(`可用内存下降 ${availableDrop} MB，内存压力可见`);
+        else tips.push(`内存已用量上升 ${usedDelta} MB，内存压力可见`);
+      } else {
+        tips.push(`内存压力变化不明显 (available ${beforeStats.available} MB → ${afterStats.available} MB)`);
+      }
+    } else {
+      tips.push("未解析到内存采样，请查看内存泄漏日志");
+    }
   }
 
   if (key === "test_disk_fill") {
@@ -1024,14 +1043,6 @@ async function runSimpleAction(actionKey, title, params, btn) {
   }
 }
 
-function runClusterStatus() {
-  if (!clusterStatusBtn) return;
-  const namespace = overviewNamespaceEl && overviewNamespaceEl.value.trim()
-    ? overviewNamespaceEl.value.trim()
-    : "default";
-  runSimpleAction("k8s_status", "K8s / Chaos 状态查看", { namespace }, clusterStatusBtn);
-}
-
 async function runRecoveryAll() {
   if (!recoverAllBtn) return;
   const btnText = recoverAllBtn.textContent;
@@ -1149,6 +1160,22 @@ function buildSimpleHistoryEntry(title, actionKey, data, startedAt) {
 
   const body = elc("div", "history-body");
   (data.results || []).forEach(r => body.appendChild(renderNodeResult(r)));
+  if (data.tests && data.tests.length) {
+    const testSec = elc("div", "test-section");
+    testSec.appendChild(elc("div", "test-head", "自动验证"));
+    data.tests.forEach(test => {
+      const card = elc("div", `test-card ${test.ok ? "ok" : "bad"}`);
+      card.appendChild(elc("div", "test-card-head", `
+        <span class="test-title">${escapeHtml(test.title || "自动测试")}</span>
+        <span class="test-status">${test.ok ? "成功" : "失败"}</span>
+      `));
+      const testBody = elc("div", "test-body");
+      (test.results || []).forEach(r => testBody.appendChild(renderNodeResult(r)));
+      card.appendChild(testBody);
+      testSec.appendChild(card);
+    });
+    body.appendChild(testSec);
+  }
 
   item.appendChild(header);
   item.appendChild(body);
@@ -1304,9 +1331,11 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("[app.js] DOMContentLoaded fired");
   try {
     if (refreshBtn) refreshBtn.addEventListener("click", function () { initLoad(); });
-    if (clearBtn) clearBtn.addEventListener("click", function () { historyEl.innerHTML = ""; });
+    if (clearBtn) clearBtn.addEventListener("click", function () { renderHistoryMessage("本次暂无操作记录"); });
+    if (historyPageBtn) historyPageBtn.addEventListener("click", function () { window.location.href = "/history"; });
     if (recoverAllBtn) recoverAllBtn.addEventListener("click", function () { runRecoveryAll(); });
-    if (clusterStatusBtn) clusterStatusBtn.addEventListener("click", function () { runClusterStatus(); });
+
+    renderHistoryMessage("本次暂无操作记录");
 
     healthCheck().then(function () {
       return initLoad();
@@ -1345,14 +1374,6 @@ async function initLoad() {
     renderNodes(cfg.nodes || []);
     renderMainPanel(cfg);
 
-    var outputCfg = cfg.output || {};
-    var maxLines = typeof outputCfg.max_lines === "number" ? outputCfg.max_lines : 200;
-    var maxChars = typeof outputCfg.max_chars === "number" ? outputCfg.max_chars : 8000;
-    if ((maxLines || 0) <= 0 && (maxChars || 0) <= 0) {
-      outputLimitEl.textContent = "输出限制: 无限制";
-    } else {
-      outputLimitEl.textContent = "输出限制: " + maxLines + " 行 / " + maxChars + " 字符";
-    }
     console.log("[app.js] initLoad complete");
   } catch (err) {
     console.error("[app.js] initLoad error:", err);

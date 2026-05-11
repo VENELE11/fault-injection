@@ -52,6 +52,8 @@ static const char *CLUSTER_VM_NAMES[] = {"master", "slave1", "slave2"};
 #define CLUSTER_VM_COUNT (sizeof(CLUSTER_VM_NAMES) / sizeof(CLUSTER_VM_NAMES[0]))
 
 static char g_tool_dir[PATH_MAX] = ".";
+static const char *VM_NAME_PREFIXES[] = {"alpine_", "ubuntu_", "kvm_", "vm_"};
+#define VM_NAME_PREFIX_COUNT (sizeof(VM_NAME_PREFIXES) / sizeof(VM_NAME_PREFIXES[0]))
 
 int normalize_status(int status)
 {
@@ -153,26 +155,59 @@ void normalize_vm_name(char *name)
     if (!name || !*name)
         return;
 
-    while (isspace((unsigned char)name[0]))
-    {
+    char *start = name;
+    while (isspace((unsigned char)*start))
+        start++;
+    if (start != name)
+        memmove(name, start, strlen(start) + 1);
+    while (name[0] == '"' || name[0] == '\'')
         memmove(name, name + 1, strlen(name));
-    }
+
+    size_t len = strlen(name);
+    while (len > 0 && (isspace((unsigned char)name[len - 1]) || name[len - 1] == '"' || name[len - 1] == '\''))
+        name[--len] = '\0';
 
     if (strncmp(name, "guest=", 6) == 0)
     {
         memmove(name, name + 6, strlen(name + 6) + 1);
     }
 
-    size_t len = strlen(name);
-    while (len > 0 && (isspace((unsigned char)name[len - 1]) || name[len - 1] == '"' || name[len - 1] == '\'' || name[len - 1] == ','))
-    {
-        name[--len] = '\0';
-    }
+    char *comma = strchr(name, ',');
+    if (comma)
+        *comma = '\0';
 
-    if (strncmp(name, "alpine_", 7) == 0 && strlen(name) > 7)
+    len = strlen(name);
+    while (len > 0 && (isspace((unsigned char)name[len - 1]) || name[len - 1] == '"' || name[len - 1] == '\'' || name[len - 1] == ','))
+        name[--len] = '\0';
+
+    for (size_t i = 0; i < VM_NAME_PREFIX_COUNT; i++)
     {
-        memmove(name, name + 7, strlen(name + 7) + 1);
+        const char *prefix = VM_NAME_PREFIXES[i];
+        size_t prefix_len = strlen(prefix);
+        if (strncmp(name, prefix, prefix_len) == 0 && strlen(name) > prefix_len)
+        {
+            memmove(name, name + prefix_len, strlen(name + prefix_len) + 1);
+            break;
+        }
     }
+}
+
+int extract_name_after_marker(const char *args, const char *marker, char *name, size_t size)
+{
+    const char *p = strstr(args, marker);
+    if (!p)
+        return -1;
+
+    p += strlen(marker);
+    size_t i = 0;
+    while (p[i] && p[i] != '.' && p[i] != ',' && !isspace((unsigned char)p[i]) && p[i] != '/' && i + 1 < size)
+    {
+        name[i] = p[i];
+        i++;
+    }
+    name[i] = '\0';
+    normalize_vm_name(name);
+    return name[0] ? 0 : -1;
 }
 
 int extract_vm_name_from_args(const char *args, char *name, size_t size)
@@ -208,17 +243,18 @@ int extract_vm_name_from_args(const char *args, char *name, size_t size)
 
     if (!name[0])
     {
-        const char *drive = strstr(args, "images/node_");
-        if (drive)
+        const char *markers[] = {
+            "images/node_", "/node_", "node_",
+            "images/ubuntu_", "/ubuntu_", "ubuntu_",
+            "images/alpine_", "/alpine_", "alpine_",
+            "images/kvm_", "/kvm_", "kvm_",
+            "images/vm_", "/vm_", "vm_",
+        };
+        size_t marker_count = sizeof(markers) / sizeof(markers[0]);
+        for (size_t i = 0; i < marker_count; i++)
         {
-            drive += strlen("images/node_");
-            size_t i = 0;
-            while (drive[i] && drive[i] != '.' && drive[i] != ' ' && i + 1 < size)
-            {
-                name[i] = drive[i];
-                i++;
-            }
-            name[i] = '\0';
+            if (extract_name_after_marker(args, markers[i], name, size) == 0)
+                break;
         }
     }
 
@@ -226,10 +262,45 @@ int extract_vm_name_from_args(const char *args, char *name, size_t size)
     return name[0] ? 0 : -1;
 }
 
+int is_qemu_args(const char *args)
+{
+    if (!args)
+        return 0;
+    return strstr(args, "qemu-system") != NULL || strstr(args, "qemu-kvm") != NULL;
+}
+
+int read_proc_cmdline(int pid, char *args, size_t size)
+{
+    if (!args || size == 0)
+        return -1;
+
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+    FILE *fp = fopen(path, "r");
+    if (!fp)
+        return -1;
+
+    size_t n = fread(args, 1, size - 1, fp);
+    fclose(fp);
+    if (n == 0)
+        return -1;
+
+    args[n] = '\0';
+    for (size_t i = 0; i < n; i++)
+    {
+        if (args[i] == '\0')
+            args[i] = ' ';
+    }
+    return 0;
+}
+
 int get_qemu_args(int pid, char *args, size_t size)
 {
+    if (read_proc_cmdline(pid, args, size) == 0)
+        return 0;
+
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "ps -p %d -o args= 2>/dev/null", pid);
+    snprintf(cmd, sizeof(cmd), "ps -ww -p %d -o args= 2>/dev/null", pid);
 
     FILE *fp = popen(cmd, "r");
     if (!fp)
@@ -258,27 +329,42 @@ int vm_name_matches(const char *actual, const char *target)
     if (!actual || !*actual || !target || !*target)
         return 0;
 
-    if (strcmp(actual, target) == 0)
-        return 1;
+    char normalized_actual[128];
+    char normalized_target[128];
+    snprintf(normalized_actual, sizeof(normalized_actual), "%s", actual);
+    snprintf(normalized_target, sizeof(normalized_target), "%s", target);
+    normalize_vm_name(normalized_actual);
+    normalize_vm_name(normalized_target);
 
-    char expected[128];
-    snprintf(expected, sizeof(expected), "alpine_%s", target);
-    return strcmp(actual, expected) == 0;
+    return strcmp(normalized_actual, normalized_target) == 0;
 }
 
 // === 查找QEMU-KVM进程 ===
 int* find_qemu_pids(int *count) {
     static int pids[100];
     *count = 0;
-    
-    char cmd[512];
-    snprintf(
-        cmd,
-        sizeof(cmd),
-        "ps -eo pid=,args= | awk '(/qemu-system/ || /qemu-kvm/) && (/accel=kvm/ || /-enable-kvm/) {print $1}'"
-    );
-    
-    FILE *fp = popen(cmd, "r");
+
+    DIR *dir = opendir("/proc");
+    if (dir)
+    {
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != NULL && *count < 100)
+        {
+            if (!is_numeric_arg(ent->d_name))
+                continue;
+
+            int pid = atoi(ent->d_name);
+            char args[4096];
+            if (pid > 0 && read_proc_cmdline(pid, args, sizeof(args)) == 0 && is_qemu_args(args))
+                pids[(*count)++] = pid;
+        }
+        closedir(dir);
+    }
+
+    if (*count > 0)
+        return pids;
+
+    FILE *fp = popen("ps -ww -eo pid=,args= | awk '($0 ~ /[q]emu-system/ || $0 ~ /[q]emu-kvm/) {print $1}'", "r");
     if (fp) {
         char line[32];
         while (fgets(line, sizeof(line), fp) && *count < 100) {

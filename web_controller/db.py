@@ -270,3 +270,16 @@ def get_run(run_id: int) -> Optional[Dict[str, Any]]:
         for r in result_rows
     ]
     return run
+
+
+def clear_runs() -> int:
+    """Delete all persisted runs and their command results."""
+    init_db()
+    with connect() as conn:
+        row = conn.execute("SELECT COUNT(*) AS count FROM fault_runs").fetchone()
+        deleted = int(row["count"] if row else 0)
+        conn.execute("DELETE FROM fault_runs")
+        conn.execute(
+            "DELETE FROM sqlite_sequence WHERE name IN ('fault_runs', 'fault_results')"
+        )
+        return deleted

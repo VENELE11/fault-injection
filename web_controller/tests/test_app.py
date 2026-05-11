@@ -37,6 +37,9 @@ from web_controller.app import (
     _build_process_restart_plan,
     _build_vm_mem_inject_cmd,
     _build_vm_reg_inject_cmd,
+    _extract_qemu_vm_name,
+    _is_vm_running,
+    _qemu_args_match_node,
     build_context,
     build_ssh_command,
     find_node_by_value,
@@ -54,6 +57,7 @@ from web_controller.app import (
     truncate_text,
     validate_hex,
     validate_ip,
+    validate_kvm_target,
     validate_target,
 )
 
@@ -130,6 +134,33 @@ class TestValidateTarget:
 
     def test_empty_value(self, mock_config):
         assert validate_target(mock_config, "") is False
+
+
+class TestKvmVmDetection:
+    """KVM/QEMU VM 名称识别：兼容 Ubuntu、Alpine 和 libvirt 参数。"""
+
+    def test_extracts_ubuntu_name(self):
+        args = "qemu-system-aarch64 -name ubuntu_master -M virt,accel=kvm"
+        assert _extract_qemu_vm_name(args) == "master"
+
+    def test_extracts_libvirt_guest_name(self):
+        args = "qemu-system-x86_64 -name guest=slave1,debug-threads=on -accel kvm"
+        assert _extract_qemu_vm_name(args) == "slave1"
+
+    def test_matches_node_image_name(self):
+        args = "qemu-system-aarch64 -drive file=/vm/images/node_slave2.qcow2,format=qcow2"
+        assert _qemu_args_match_node(args, "slave2") is True
+
+    def test_is_vm_running_uses_normalized_names(self):
+        args = ["qemu-system-x86_64 -name guest=ubuntu_master,debug-threads=on -accel kvm"]
+        with patch("web_controller.app._iter_qemu_args", return_value=args):
+            assert _is_vm_running("master") is True
+
+    def test_kvm_target_accepts_numeric_pid(self, mock_config):
+        assert validate_kvm_target(mock_config, "12345") is True
+
+    def test_kvm_target_accepts_prefixed_node_name(self, mock_config):
+        assert validate_kvm_target(mock_config, "ubuntu_slave1") is True
 
 
 # ====================================================================
@@ -521,6 +552,48 @@ class TestActionsDefinition:
     def test_groups_count(self):
         assert len(GROUPS) == 8
 
+    def test_vm_cpu_action_runs_in_background(self):
+        spec = ACTIONS["vm_cpu"]
+        cmds = spec["cmds"]({"vm_cpu_injector": "/tmp/vm_injection/cpu_injector"}, {"pid": 0, "duration": 20, "threads": 0, "cpu_mode": "2"})
+        script = cmds[0][2]
+
+        assert cmds[0][:2] == ["/bin/sh", "-lc"]
+        assert "nohup /tmp/vm_injection/cpu_injector 0 20 0 2" in script
+        assert "/tmp/fi_vm_cpu_stress.pid" in script
+        assert "/tmp/fi_vm_cpu_stress.log" in script
+        assert spec["sudo"] == "vm"
+        assert spec["timeout"] == 20
+
+    def test_vm_cpu_clear_uses_pidfile(self):
+        cmds = ACTIONS["vm_cpu_clear"]["cmds"]({}, {})
+        script = cmds[0][2]
+
+        assert cmds[0][:2] == ["/bin/sh", "-lc"]
+        assert "/tmp/fi_vm_cpu_stress.pid" in script
+        assert "kill \"$pid\"" in script
+        assert "pkill -f '[c]pu_injector '" in script
+
+    def test_vm_mem_leak_action_runs_in_background(self):
+        spec = ACTIONS["vm_mem_leak"]
+        cmds = spec["cmds"]({"vm_mem_leak": "/tmp/vm_injection/mem_leak"}, {"size_mb": 128})
+        script = cmds[0][2]
+
+        assert cmds[0][:2] == ["/bin/sh", "-lc"]
+        assert "nohup /tmp/vm_injection/mem_leak 0 128" in script
+        assert "/tmp/fi_vm_mem_leak.pid" in script
+        assert "/tmp/fi_vm_mem_leak.log" in script
+        assert spec["sudo"] is False
+        assert spec["timeout"] == 20
+
+    def test_vm_mem_leak_clear_uses_pidfile(self):
+        cmds = ACTIONS["vm_mem_leak_clear"]["cmds"]({}, {})
+        script = cmds[0][2]
+
+        assert cmds[0][:2] == ["/bin/sh", "-lc"]
+        assert "/tmp/fi_vm_mem_leak.pid" in script
+        assert "kill \"$pid\"" in script
+        assert "pkill -f '[m]em_leak 0 '" in script
+
 
 class TestParamEnumsAndRanges:
     """验证 PARAM_ENUMS 与 NUM_RANGES 的结构。"""
@@ -766,6 +839,57 @@ class TestApiActionExecution:
         assert "results" in data
         assert isinstance(data["results"], list)
         assert "action" in data and data["action"] == "cluster_status"
+
+
+class TestApiHistory:
+    """数据库历史接口：动作执行后可查询、详情可回放、清空会落库。"""
+
+    @staticmethod
+    def _fake_run_on_node(cfg, node, cmd, timeout_override=None):
+        return {
+            "ok": True,
+            "exit_code": 0,
+            "stdout": f"{node.get('name')} ok",
+            "stderr": "",
+            "elapsed": 0.01,
+            "cmd": " ".join(cmd),
+        }
+
+    def test_action_persists_history_and_returns_run_id(self, client):
+        with patch("web_controller.app.run_on_node", side_effect=self._fake_run_on_node):
+            resp = client.post("/api/action", json={"action": "cluster_status", "params": {}})
+
+        assert resp.status_code == 200
+        action_payload = resp.json()
+        assert isinstance(action_payload.get("run_id"), int)
+
+        history_resp = client.get("/api/history")
+        assert history_resp.status_code == 200
+        runs = history_resp.json()["runs"]
+        assert len(runs) == 1
+        assert runs[0]["id"] == action_payload["run_id"]
+        assert runs[0]["action_key"] == "cluster_status"
+        assert runs[0]["result_count"] == 3
+
+        detail_resp = client.get(f"/api/history/{action_payload['run_id']}")
+        assert detail_resp.status_code == 200
+        detail = detail_resp.json()
+        assert detail["action_key"] == "cluster_status"
+        assert len(detail["results"]) == 3
+        assert detail["results"][0]["phase"] == "action"
+
+    def test_clear_history_deletes_persisted_runs(self, client):
+        with patch("web_controller.app.run_on_node", side_effect=self._fake_run_on_node):
+            client.post("/api/action", json={"action": "cluster_status", "params": {}})
+
+        clear_resp = client.delete("/api/history")
+        assert clear_resp.status_code == 200
+        assert clear_resp.json()["deleted"] == 1
+        assert client.get("/api/history").json()["runs"] == []
+
+    def test_missing_history_detail_returns_404(self, client):
+        resp = client.get("/api/history/999999")
+        assert resp.status_code == 404
 
 
 class TestApiFunctestCleanup:

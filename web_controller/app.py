@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from web_controller.db import get_run, init_db, list_runs, record_run
+from web_controller.db import clear_runs, get_run, init_db, list_runs, record_run
 from web_controller.k8s_chaos import (
     chaos_clear_cmds,
     chaos_status_cmds,
@@ -36,6 +36,7 @@ CONFIG_ENV = "FI_CONTROLLER_CONFIG"
 REPO_ROOT = BASE_DIR.parent
 VM_DIR = REPO_ROOT / "vm_injection"
 VM_LOG_DIR = REPO_ROOT / ".vm_logs"
+VM_NAME_PREFIXES = ("alpine_", "ubuntu_", "kvm_", "vm_")
 
 app = FastAPI(title="云平台故障注入工具", version="0.4")
 
@@ -143,6 +144,14 @@ def get_master_node(cfg: Dict[str, Any]) -> Dict[str, Any]:
         if node.get("role") == "master" or node.get("name") == "master":
             return node
     raise RuntimeError("Master node not found in config")
+
+
+def get_worker_nodes(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        node
+        for node in get_nodes(cfg)
+        if node.get("role") != "master" and node.get("name") != "master"
+    ]
 
 
 def is_local_node(node: Dict[str, Any]) -> bool:
@@ -473,9 +482,80 @@ def _ps_aux() -> str:
         return ""
 
 
+def _normalize_qemu_vm_name(name: str) -> str:
+    value = str(name or "").strip().strip("\"'")
+    if value.startswith("guest="):
+        value = value[6:]
+    value = value.split(",", 1)[0].strip().strip("\"'")
+    for prefix in VM_NAME_PREFIXES:
+        if value.startswith(prefix) and len(value) > len(prefix):
+            value = value[len(prefix):]
+            break
+    return value
+
+
+def _is_qemu_args(args: str) -> bool:
+    return "qemu-system" in args or "qemu-kvm" in args
+
+
+def _extract_qemu_vm_name(args: str) -> str:
+    raw = str(args or "")
+    match = re.search(r"(?:^|\s)-name(?:\s+|=)(\"[^\"]+\"|'[^']+'|\S+)", raw)
+    if match:
+        return _normalize_qemu_vm_name(match.group(1))
+
+    for prefix in ("node_", "ubuntu_", "alpine_", "kvm_", "vm_"):
+        match = re.search(rf"(?:^|[/\s=]){re.escape(prefix)}([A-Za-z0-9_-]+)(?:\.qcow2|[,/\s]|$)", raw)
+        if match:
+            value = match.group(1) if prefix == "node_" else prefix + match.group(1)
+            return _normalize_qemu_vm_name(value)
+
+    return ""
+
+
+def _qemu_args_match_node(args: str, node: str) -> bool:
+    if not _is_qemu_args(args):
+        return False
+    return _extract_qemu_vm_name(args) == _normalize_qemu_vm_name(node)
+
+
+def _iter_qemu_args() -> List[str]:
+    proc_dir = Path("/proc")
+    results: List[str] = []
+    if proc_dir.exists():
+        for entry in proc_dir.iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                raw = (entry / "cmdline").read_bytes()
+            except (OSError, PermissionError):
+                continue
+            if not raw:
+                continue
+            args = raw.replace(b"\0", b" ").decode(errors="ignore").strip()
+            if _is_qemu_args(args):
+                results.append(args)
+        if results:
+            return results
+
+    return [line for line in _ps_aux().splitlines() if _is_qemu_args(line)]
+
+
 def _is_vm_running(node: str) -> bool:
-    pattern = re.compile(rf"qemu-system-aarch64.*alpine_{re.escape(node)}")
-    return bool(pattern.search(_ps_aux()))
+    return any(_qemu_args_match_node(args, node) for args in _iter_qemu_args())
+
+
+def validate_kvm_target(cfg: Dict[str, Any], value: str) -> bool:
+    target = str(value or "").strip()
+    if not target:
+        return False
+    if target.isdigit():
+        return True
+    if validate_target(cfg, target):
+        return True
+    normalized = _normalize_qemu_vm_name(target)
+    return normalized in {str(n.get("name", "")) for n in get_nodes(cfg)}
+
 
 
 def _ensure_vm_running(node: str) -> None:
@@ -578,6 +658,99 @@ def build_context(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "k8s_demo_replicas": k8s_cfg.get("demo_replicas", 2),
         "k8s_probe_image": k8s_cfg.get("probe_image", "busybox:1.36"),
     }
+
+
+def _build_hadoop_daemon_cmd(
+    ctx: Dict[str, Any],
+    tool: str,
+    daemon: str,
+    action: str,
+    log_name: str,
+    process_name: str = "",
+) -> List[str]:
+    tool_path = f"{ctx.get('hadoop_bin', '/opt/hadoop/bin')}/{tool}"
+    log_path = f"/tmp/fi_{log_name}"
+    shell_cmd = (
+        ". /etc/profile >/dev/null 2>&1; "
+        f"{tool_path} --daemon {action} {daemon} >{shlex.quote(log_path)} 2>&1"
+    )
+    if action == "start" and process_name:
+        shell_cmd += f"; jps 2>/dev/null | grep -q {shlex.quote(process_name)}"
+    return ["/bin/sh", "-lc", shell_cmd]
+
+
+def _hadoop_daemon_step(
+    node: Dict[str, Any],
+    ctx: Dict[str, Any],
+    tool: str,
+    daemon: str,
+    action: str,
+    log_name: str,
+    process_name: str,
+) -> Dict[str, Any]:
+    return {
+        "node": node,
+        "cmd": _build_hadoop_daemon_cmd(ctx, tool, daemon, action, log_name, process_name),
+    }
+
+
+def _build_hadoop_start_plan(cfg: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
+    master = get_master_node(cfg)
+    workers = get_worker_nodes(cfg)
+    plan: List[Dict[str, Any]] = [
+        _hadoop_daemon_step(master, ctx, "hdfs", "namenode", "start", "nn.log", "NameNode"),
+        _hadoop_daemon_step(master, ctx, "hdfs", "secondarynamenode", "start", "snn.log", "SecondaryNameNode"),
+    ]
+    plan.extend(
+        _hadoop_daemon_step(node, ctx, "hdfs", "datanode", "start", f"{node.get('name', 'worker')}_dn.log", "DataNode")
+        for node in workers
+    )
+    plan.append(_hadoop_daemon_step(master, ctx, "yarn", "resourcemanager", "start", "rm.log", "ResourceManager"))
+    plan.extend(
+        _hadoop_daemon_step(node, ctx, "yarn", "nodemanager", "start", f"{node.get('name', 'worker')}_nm.log", "NodeManager")
+        for node in workers
+    )
+    return plan
+
+
+def _build_hadoop_stop_plan(cfg: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
+    master = get_master_node(cfg)
+    workers = get_worker_nodes(cfg)
+    plan: List[Dict[str, Any]] = []
+    plan.extend(
+        _hadoop_daemon_step(node, ctx, "yarn", "nodemanager", "stop", f"{node.get('name', 'worker')}_nm_stop.log", "NodeManager")
+        for node in workers
+    )
+    plan.append(_hadoop_daemon_step(master, ctx, "yarn", "resourcemanager", "stop", "rm_stop.log", "ResourceManager"))
+    plan.extend(
+        _hadoop_daemon_step(node, ctx, "hdfs", "datanode", "stop", f"{node.get('name', 'worker')}_dn_stop.log", "DataNode")
+        for node in workers
+    )
+    plan.append(_hadoop_daemon_step(master, ctx, "hdfs", "secondarynamenode", "stop", "snn_stop.log", "SecondaryNameNode"))
+    plan.append(_hadoop_daemon_step(master, ctx, "hdfs", "namenode", "stop", "nn_stop.log", "NameNode"))
+    return plan
+
+
+def _build_hadoop_restart_plan(cfg: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
+    master = get_master_node(cfg)
+    return _build_hadoop_stop_plan(cfg, ctx) + [{"node": master, "cmd": ["/bin/sleep", "3"]}] + _build_hadoop_start_plan(cfg, ctx)
+
+
+def _build_process_restart_plan(cfg: Dict[str, Any], ctx: Dict[str, Any], component: str) -> List[Dict[str, Any]]:
+    master = get_master_node(cfg)
+    workers = get_worker_nodes(cfg)
+    specs = {
+        "nn": ([master], "hdfs", "namenode", "NameNode"),
+        "dn": (workers, "hdfs", "datanode", "DataNode"),
+        "rm": ([master], "yarn", "resourcemanager", "ResourceManager"),
+        "nm": (workers, "yarn", "nodemanager", "NodeManager"),
+        "snn": ([master], "hdfs", "secondarynamenode", "SecondaryNameNode"),
+    }
+    nodes, tool, daemon, process_name = specs.get(component, ([], "", "", ""))
+    return [
+        _hadoop_daemon_step(node, ctx, tool, daemon, "start", f"{node.get('name', 'node')}_{component}_restart.log", process_name)
+        for node in nodes
+    ]
 
 
 def resolve_sudo(cfg: Dict[str, Any], spec: Dict[str, Any]) -> bool:
@@ -1347,6 +1520,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "desc": "使用 cpu_injector 施加高负载。",
         "group": "vm",
         "scope": "local",
+        "timeout": 20,
         "params": [
             {"name": "pid", "label": "目标 PID (可选)", "type": "number", "required": False, "placeholder": "0"},
             {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 10, "required": True},
@@ -1363,28 +1537,42 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
                 "required": False,
             },
         ],
-        "cmds": lambda ctx, params: [
-            [ctx["vm_cpu_injector"], str(params.get("pid", 0)), str(params["duration"])]
-            + ([str(params.get("threads", 0))] if params.get("threads") is not None or params.get("cpu_mode") is not None else [])
-            + ([str(params["cpu_mode"])] if params.get("cpu_mode") is not None else [])
-        ],
+        "cmds": lambda ctx, params: _build_vm_cpu_start_cmd(ctx, params),
         "tool": "vm_cpu_injector",
         "sudo": "vm",
         "danger": True,
+    },
+    "vm_cpu_clear": {
+        "title": "清理 VM CPU 压力",
+        "desc": "停止后台 cpu_injector 压力进程。",
+        "group": "vm",
+        "scope": "local",
+        "params": [],
+        "cmds": lambda ctx, params: _build_vm_cpu_clear_cmd(ctx, params),
+        "sudo": "vm",
     },
     "vm_mem_leak": {
         "title": "VM 内存泄漏",
         "desc": "使用 mem_leak 大量占用内存，模拟 OOM。",
         "group": "vm",
         "scope": "local",
-        "timeout": 300,
+        "timeout": 20,
         "params": [
             {"name": "size_mb", "label": "占用内存 (MB)", "type": "number", "default": 512, "required": True},
         ],
-        "cmds": lambda ctx, params: [[ctx["vm_mem_leak"], "0", str(params["size_mb"]) ]],
+        "cmds": lambda ctx, params: _build_vm_mem_leak_start_cmd(ctx, params),
         "tool": "vm_mem_leak",
-        "sudo": "vm",
+        "sudo": False,
         "danger": True,
+    },
+    "vm_mem_leak_clear": {
+        "title": "清理 VM 内存泄漏",
+        "desc": "停止后台 mem_leak 压力进程。",
+        "group": "vm",
+        "scope": "local",
+        "params": [],
+        "cmds": lambda ctx, params: _build_vm_mem_leak_clear_cmd(ctx, params),
+        "sudo": False,
     },
     "vm_mem_inject": {
         "title": "VM 内存注入",
@@ -1490,7 +1678,15 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "kvm",
         "scope": "local",
         "params": [
-            {"name": "pid", "label": "目标 PID", "type": "number", "required": True},
+            {
+                "name": "target",
+                "label": "目标虚拟机/PID",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2 / PID",
+                "kvm_target": True,
+            },
             {"name": "reg", "label": "寄存器", "type": "text", "required": True, "placeholder": "PC / SP / X0"},
             {
                 "name": "soft_type",
@@ -1524,7 +1720,15 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "kvm",
         "scope": "local",
         "params": [
-            {"name": "pid", "label": "目标 PID", "type": "number", "required": True},
+            {
+                "name": "target",
+                "label": "目标虚拟机/PID",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2 / PID",
+                "kvm_target": True,
+            },
             {
                 "name": "guest_type",
                 "label": "类型",
@@ -1542,7 +1746,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
             [
                 ctx["kvm_injector"],
                 {"data": "guest-data", "divzero": "guest-divzero", "invalid": "guest-invalid"}[params["guest_type"]],
-                str(params["pid"]),
+                str(params["target"]),
             ]
         ],
         "tool": "kvm_injector",
@@ -1555,10 +1759,18 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "kvm",
         "scope": "local",
         "params": [
-            {"name": "pid", "label": "目标 PID", "type": "number", "required": True},
+            {
+                "name": "target",
+                "label": "目标虚拟机/PID",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2 / PID",
+                "kvm_target": True,
+            },
             {"name": "ms", "label": "延迟 (毫秒)", "type": "number", "default": 100, "required": True},
         ],
-        "cmds": lambda ctx, params: [[ctx["kvm_injector"], "perf-delay", str(params["pid"]), str(params["ms"]) ]],
+        "cmds": lambda ctx, params: [[ctx["kvm_injector"], "perf-delay", str(params["target"]), str(params["ms"]) ]],
         "tool": "kvm_injector",
         "sudo": "kvm",
         "danger": True,
@@ -1569,14 +1781,22 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "kvm",
         "scope": "local",
         "params": [
-            {"name": "pid", "label": "目标 PID", "type": "number", "required": True},
+            {
+                "name": "target",
+                "label": "目标虚拟机/PID",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2 / PID",
+                "kvm_target": True,
+            },
             {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 10, "required": True},
             {"name": "threads", "label": "线程数 (可选)", "type": "number", "required": False},
         ],
         "cmds": lambda ctx, params: (
-            [[ctx["kvm_injector"], "perf-stress", str(params["pid"]), str(params["duration"]), str(params["threads"])]]
+            [[ctx["kvm_injector"], "perf-stress", str(params["target"]), str(params["duration"]), str(params["threads"])]]
             if params.get("threads") is not None
-            else [[ctx["kvm_injector"], "perf-stress", str(params["pid"]), str(params["duration"])]]
+            else [[ctx["kvm_injector"], "perf-stress", str(params["target"]), str(params["duration"])]]
         ),
         "tool": "kvm_injector",
         "sudo": "kvm",
@@ -1588,9 +1808,17 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "group": "kvm",
         "scope": "local",
         "params": [
-            {"name": "pid", "label": "目标 PID", "type": "number", "required": True},
+            {
+                "name": "target",
+                "label": "目标虚拟机/PID",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2 / PID",
+                "kvm_target": True,
+            },
         ],
-        "cmds": lambda ctx, params: [[ctx["kvm_injector"], "perf-clear", str(params["pid"]) ]],
+        "cmds": lambda ctx, params: [[ctx["kvm_injector"], "perf-clear", str(params["target"]) ]],
         "tool": "kvm_injector",
         "sudo": "kvm",
     },
@@ -1753,6 +1981,105 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _build_vm_cpu_start_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    target_pid = int(params.get("pid", 0) or 0)
+    duration = int(params["duration"])
+    threads = int(params.get("threads", 0) or 0)
+    mode = int(params.get("cpu_mode", 2) or 2)
+    tool = shlex.quote(ctx["vm_cpu_injector"])
+    cmd = (
+        "pidfile=/tmp/fi_vm_cpu_stress.pid; "
+        "log=/tmp/fi_vm_cpu_stress.log; "
+        "if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then "
+        "oldpid=$(cat \"$pidfile\"); kill \"$oldpid\" 2>/dev/null || true; sleep 1; "
+        "fi; "
+        "rm -f \"$pidfile\" \"$log\"; "
+        f"nohup {tool} {target_pid} {duration} {threads} {mode} > \"$log\" 2>&1 & "
+        "pid=$!; echo \"$pid\" > \"$pidfile\"; "
+        "sleep 1; "
+        "if kill -0 \"$pid\" 2>/dev/null; then "
+        f"echo '[cpu_stress] started PID:' \"$pid\" 'duration:' {duration} 'threads:' {threads} 'mode:' {mode}; "
+        "tail -30 \"$log\" 2>/dev/null || true; "
+        "else "
+        "echo '[cpu_stress] failed to start'; "
+        "cat \"$log\" 2>/dev/null || true; "
+        "rm -f \"$pidfile\"; "
+        "exit 1; "
+        "fi"
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
+def _build_vm_cpu_clear_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    cmd = (
+        "pidfile=/tmp/fi_vm_cpu_stress.pid; "
+        "log=/tmp/fi_vm_cpu_stress.log; "
+        "if [ -s \"$pidfile\" ]; then "
+        "pid=$(cat \"$pidfile\"); "
+        "if kill -0 \"$pid\" 2>/dev/null; then "
+        "kill \"$pid\" 2>/dev/null || true; sleep 1; "
+        "if kill -0 \"$pid\" 2>/dev/null; then kill -9 \"$pid\" 2>/dev/null || true; fi; "
+        "echo '[cpu_stress] stopped PID:' \"$pid\"; "
+        "else "
+        "echo '[cpu_stress] pidfile exists but process is not running:' \"$pid\"; "
+        "fi; "
+        "rm -f \"$pidfile\"; "
+        "else "
+        "pkill -f '[c]pu_injector ' 2>/dev/null && echo '[cpu_stress] stopped by pattern' || echo '[cpu_stress] no running process'; "
+        "fi; "
+        "tail -30 \"$log\" 2>/dev/null || true"
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
+def _build_vm_mem_leak_start_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    size_mb = int(params["size_mb"])
+    tool = shlex.quote(ctx["vm_mem_leak"])
+    cmd = (
+        "pidfile=/tmp/fi_vm_mem_leak.pid; "
+        "log=/tmp/fi_vm_mem_leak.log; "
+        "if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then "
+        "oldpid=$(cat \"$pidfile\"); kill \"$oldpid\" 2>/dev/null || true; sleep 1; "
+        "fi; "
+        "rm -f \"$pidfile\" \"$log\"; "
+        f"nohup {tool} 0 {size_mb} > \"$log\" 2>&1 & "
+        "pid=$!; echo \"$pid\" > \"$pidfile\"; "
+        "sleep 2; "
+        "if kill -0 \"$pid\" 2>/dev/null; then "
+        f"echo '[mem_leak] started PID:' \"$pid\" 'size_mb:' {size_mb}; "
+        "tail -20 \"$log\" 2>/dev/null || true; "
+        "else "
+        "echo '[mem_leak] failed to start'; "
+        "cat \"$log\" 2>/dev/null || true; "
+        "rm -f \"$pidfile\"; "
+        "exit 1; "
+        "fi"
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
+def _build_vm_mem_leak_clear_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    cmd = (
+        "pidfile=/tmp/fi_vm_mem_leak.pid; "
+        "log=/tmp/fi_vm_mem_leak.log; "
+        "if [ -s \"$pidfile\" ]; then "
+        "pid=$(cat \"$pidfile\"); "
+        "if kill -0 \"$pid\" 2>/dev/null; then "
+        "kill \"$pid\" 2>/dev/null || true; sleep 1; "
+        "if kill -0 \"$pid\" 2>/dev/null; then kill -9 \"$pid\" 2>/dev/null || true; fi; "
+        "echo '[mem_leak] stopped PID:' \"$pid\"; "
+        "else "
+        "echo '[mem_leak] pidfile exists but process is not running:' \"$pid\"; "
+        "fi; "
+        "rm -f \"$pidfile\"; "
+        "else "
+        "pkill -f '[m]em_leak 0 ' 2>/dev/null && echo '[mem_leak] stopped by pattern' || echo '[mem_leak] no running process'; "
+        "fi; "
+        "tail -20 \"$log\" 2>/dev/null || true"
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
 def _build_vm_mem_inject_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
     cmd = [ctx["vm_mem_injector"], "-p", str(params["pid"]), "-t", params["mem_type"], "-b", str(params["mem_bit"])]
     addr = params.get("addr")
@@ -1796,7 +2123,7 @@ def _build_kvm_soft_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[Lis
     else:
         cmd.append("soft-zero")
 
-    cmd += [str(params["pid"]), params["reg"]]
+    cmd += [str(params["target"]), params["reg"]]
 
     if params.get("soft_bit") is not None and soft_type in {"flip", "zero"}:
         cmd.append(str(params["soft_bit"]))
@@ -1823,6 +2150,11 @@ def _build_process_restart_cmds(ctx: Dict[str, Any], params: Dict[str, Any]) -> 
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(static_dir / "index.html")
+
+
+@app.get("/history")
+def history_page() -> FileResponse:
+    return FileResponse(static_dir / "history.html")
 
 
 # ---------------------------------------------------------------------------
@@ -2022,7 +2354,7 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
     for check in verify_results:
         phases.append({"phase": "verify", "check_title": check.get("title"), "results": check.get("results", [])})
 
-    persist_history_safely(
+    run_id = persist_history_safely(
         run_type="functest",
         action_key=action_key,
         scenario_key=test_key,
@@ -2033,6 +2365,8 @@ def api_functest(req: FuncTestRequest) -> JSONResponse:
         finished_at=time.time(),
         phases=phases,
     )
+    if run_id is not None:
+        payload["run_id"] = run_id
     return JSONResponse(payload)
 
 
@@ -2082,7 +2416,7 @@ def api_functest_cleanup(req: FuncTestRequest) -> JSONResponse:
         "results": payload.get("results", []),
         "error": payload.get("error"),
     }
-    persist_history_safely(
+    run_id = persist_history_safely(
         run_type="cleanup",
         action_key=cleanup_action,
         scenario_key=test_key,
@@ -2093,6 +2427,8 @@ def api_functest_cleanup(req: FuncTestRequest) -> JSONResponse:
         finished_at=time.time(),
         phases=[{"phase": "cleanup", "results": payload.get("results", [])}],
     )
+    if run_id is not None:
+        response_payload["run_id"] = run_id
     return JSONResponse(response_payload)
 
 
@@ -2152,6 +2488,13 @@ def api_history_detail(run_id: int) -> JSONResponse:
     return JSONResponse(run)
 
 
+@app.delete("/api/history")
+def api_history_clear() -> JSONResponse:
+    """Delete all persisted run history."""
+    deleted = clear_runs()
+    return JSONResponse({"ok": True, "deleted": deleted})
+
+
 @app.post("/api/action")
 def api_action(req: ActionRequest) -> JSONResponse:
     started_at = time.time()
@@ -2182,8 +2525,11 @@ def api_action(req: ActionRequest) -> JSONResponse:
         if name in params and params[name] not in allowed:
             raise HTTPException(status_code=400, detail=f"参数 {name} 非法")
 
-    if "target" in params and not validate_target(cfg, params["target"]):
-        raise HTTPException(status_code=400, detail="目标节点无效")
+    target_def = next((p for p in param_defs if p.get("name") == "target"), {})
+    if "target" in params:
+        target_ok = validate_kvm_target(cfg, params["target"]) if target_def.get("kvm_target") else validate_target(cfg, params["target"])
+        if not target_ok:
+            raise HTTPException(status_code=400, detail="目标节点无效")
 
     if "addr" in params and params.get("addr"):
         if not validate_hex(params["addr"]):
@@ -2258,7 +2604,7 @@ def api_action(req: ActionRequest) -> JSONResponse:
                     "results": test.get("results", []),
                 }
             )
-        persist_history_safely(
+        run_id = persist_history_safely(
             run_type="action",
             action_key=action,
             title=spec.get("title"),
@@ -2268,6 +2614,8 @@ def api_action(req: ActionRequest) -> JSONResponse:
             finished_at=time.time(),
             phases=phases,
         )
+        if run_id is not None:
+            payload["run_id"] = run_id
     return JSONResponse(payload)
 
 

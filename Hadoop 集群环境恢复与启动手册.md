@@ -1,149 +1,141 @@
 # Hadoop 集群环境恢复与启动手册
 
-## 1. 宿主机：启动虚拟机脚本
+本文档保留 Hadoop 集群恢复步骤，基础依赖和 Web 配置已合并到 `使用须知.md`。当前代码默认三节点名为 `master`、`slave1`、`slave2`，Web 配置通过 `127.0.0.1:2220/2221/2222` 访问。
 
-在 **Ubuntu 宿主机**上，使用支持“双网卡”的脚本启动虚拟机。网卡 1 用于 SSH 连接，网卡 2 用于集群内网通信。
+## 1. 启动三台 QEMU 虚拟机
 
-Bash
+在宿主机执行：
 
-```
-#!/bin/bash
-# 保存为 run_cluster.sh
-
-if [ -z "$1" ]; then
-    echo "用法: ./run_cluster.sh <master|slave1|slave2>"
-    exit 1
-fi
-
-NODE=$1
-
-# 配置：根据节点名分配 SSH 端口转发和内网 MAC 后缀
-if [ "$NODE" == "master" ]; then
-    SUFFIX="10"
-    HOST_PORT="2220"
-elif [ "$NODE" == "slave1" ]; then
-    SUFFIX="11"
-    HOST_PORT="2221"
-elif [ "$NODE" == "slave2" ]; then
-    SUFFIX="12"
-    HOST_PORT="2222"
-else
-    echo "❌ 错误: 未知节点名 '$NODE'"
-    exit 1
-fi
-
-echo "🚀 正在启动节点: $NODE (SSH 映射端口: $HOST_PORT) ..."
-
-qemu-system-aarch64 \
-  -name "alpine_$NODE" \
-  -M virt,accel=kvm \
-  -cpu host \
-  -m 2048 \
-  -bios ./uefi.fd \
-  -drive file=images/node_$NODE.qcow2,format=qcow2,if=virtio \
-  -netdev user,id=net0,hostfwd=tcp::${HOST_PORT}-:22 \
-  -device virtio-net-pci,netdev=net0 \
-  -netdev socket,id=net1,mcast=230.0.0.1:1234 \
-  -device virtio-net-pci,netdev=net1,mac=52:54:00:12:34:$SUFFIX \
-  -device virtio-gpu-pci \
-  -device qemu-xhci \
-  -device usb-kbd \
-  -device usb-tablet \
-  -boot menu=on
+```bash
+cd /Users/venele/Downloads/fault-injection/vm_injection
+./run_cluster.sh master
+./run_cluster.sh slave1
+./run_cluster.sh slave2
 ```
 
- [chmod +x *]
+`start_frontend.sh` 也会自动尝试执行这三条命令，并把日志写到 `.vm_logs/`。
 
-./run_cluster master
+## 2. 检查 SSH
 
-## 2. 虚拟机：配置内网 IP 永久生效
-
-在 **Alpine 虚拟机内部**修改网络配置文件，确保重启后 `192.168.1.x` 仍然可用。
-
-### 在 Master 节点上：
-
-修改 `/etc/network/interfaces`：
-
-Plaintext
-
-```
-auto eth1
-iface eth1 inet static
-    address 192.168.1.10
-    netmask 255.255.255.0
+```bash
+ssh -p 2220 root@127.0.0.1 hostname
+ssh -p 2221 root@127.0.0.1 hostname
+ssh -p 2222 root@127.0.0.1 hostname
 ```
 
-### 在 Slave 节点上：
+如果 Hadoop 脚本内部使用主机名互访，还需要在 master 内确认：
 
-分别修改 Slave1 (`.11`) 和 Slave2 (`.12`) 的 `/etc/network/interfaces`：
-
-Plaintext
-
+```bash
+ssh slave1 hostname
+ssh slave2 hostname
 ```
-# 以 Slave1 为例
+
+## 3. 配置内网 IP
+
+如果使用双网卡集群内网，建议固定：
+
+| 节点 | 内网 IP | Hadoop 角色 |
+| --- | --- | --- |
+| master | `192.168.1.10` | NameNode、SecondaryNameNode、ResourceManager |
+| slave1 | `192.168.1.11` | DataNode、NodeManager |
+| slave2 | `192.168.1.12` | DataNode、NodeManager |
+
+Alpine 示例：
+
+```text
 auto eth1
 iface eth1 inet static
     address 192.168.1.11
     netmask 255.255.255.0
 ```
 
-**生效命令**：执行 `rc-service networking restart` 或 `reboot`。
+生效：
 
-## 3. 启动 Hadoop 服务 (HDFS)
-
-在 **Master 节点**上，通过守护进程方式手动启动。
-
-Bash
-
+```bash
+rc-service networking restart
 ```
-# 加载环境变量
-source /etc/profile
 
-# 启动 NameNode 和 SecondaryNameNode
+`kvm_injection/hadoop-fi/hadoop_injector.c` 当前内置 slave 地址为 `192.168.1.11` 和 `192.168.1.12`，远程工具路径为 `/root/hadoop-fi/hadoop_injector`。如果实际 IP 或路径不同，需要同步修改源码或部署路径。
+
+## 4. 启动 HDFS
+
+在 master 节点执行：
+
+```bash
+source /etc/profile
 hdfs --daemon start namenode
 hdfs --daemon start secondarynamenode
-
-# 远程启动 Slave 节点的 DataNode
 ssh slave1 "source /etc/profile; hdfs --daemon start datanode"
 ssh slave2 "source /etc/profile; hdfs --daemon start datanode"
-
-# 检查 HDFS 状态
 hdfs dfsadmin -report
 ```
 
-## 4. 启动 YARN 服务
+首次初始化才需要：
 
-在 **Master 节点**上启动资源调度系统。
-
-Bash
-
+```bash
+hdfs namenode -format
 ```
-# 启动 ResourceManager
-yarn --daemon start resourcemanager
 
-# 远程启动 Slave 节点的 NodeManager
+## 5. 启动 YARN
+
+```bash
+source /etc/profile
+yarn --daemon start resourcemanager
+ssh slave1 "source /etc/profile; yarn --daemon start nodemanager"
+ssh slave2 "source /etc/profile; yarn --daemon start nodemanager"
+```
+
+验证：
+
+```bash
+jps
+ssh slave1 jps
+ssh slave2 jps
+yarn node -list -all
+```
+
+## 6. 常用恢复命令
+
+```bash
+# 退出 HDFS 安全模式
+hdfs dfsadmin -safemode leave
+
+# 重启 DataNode
+ssh slave1 "source /etc/profile; hdfs --daemon start datanode"
+ssh slave2 "source /etc/profile; hdfs --daemon start datanode"
+
+# 重启 NodeManager
 ssh slave1 "source /etc/profile; yarn --daemon start nodemanager"
 ssh slave2 "source /etc/profile; yarn --daemon start nodemanager"
 
-# 检查进程
-jps
-# 应看到: NameNode, SecondaryNameNode, ResourceManager, Jps
+# 清理 Hadoop 注入器制造的网络/资源故障
+sudo /root/hadoop-fi/hadoop_injector delay-clear
+sudo /root/hadoop-fi/hadoop_injector loss-clear
+sudo /root/hadoop-fi/hadoop_injector reorder-clear
+sudo /root/hadoop-fi/hadoop_injector isolate-clear
+sudo /root/hadoop-fi/hadoop_injector mem-stress-clear
+sudo /root/hadoop-fi/hadoop_injector disk-fill-clear
+sudo /root/hadoop-fi/hadoop_injector io-slow slave1 off
+sudo /root/hadoop-fi/hadoop_injector io-slow slave2 off
+sudo /root/hadoop-fi/hadoop_injector yarn-unhealthy slave1 off
+sudo /root/hadoop-fi/hadoop_injector yarn-unhealthy slave2 off
 ```
 
-## 5. 验证集群状态
+## 7. 健康检查
 
-在 **Master** 上验证全线进程是否正常。
+```bash
+hdfs dfsadmin -report
+hdfs dfs -ls /
+yarn node -list -all
+for n in master slave1 slave2; do echo "== $n =="; ssh "$n" jps; done
+```
 
-- **Master 节点应有**：`NameNode`, `SecondaryNameNode`, `ResourceManager`
+期望状态：
 
-- **Slave 节点应有**：`DataNode`, `NodeManager`
+- master：`NameNode`、`SecondaryNameNode`、`ResourceManager`
+- slave：`DataNode`、`NodeManager`
 
-- **测试 HDFS 写入**：
+## 8. 相关文档
 
-  Bash
-
-  ```
-  hdfs dfs -mkdir /success_test
-  hdfs dfs -ls /
-  ```
-
+- `Hadoop 故障注入测试说明文档.md`：注入命令、测试项和验证方式。
+- `web_controller/操作指南.md`：Web 中如何触发 Hadoop 单次动作。

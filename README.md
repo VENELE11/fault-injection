@@ -1,209 +1,140 @@
-# 面向 KVM 虚拟化平台的故障注入工具集 (Fault Injection Platform)
+# 云平台故障注入工具集
 
-## 1. 项目简介
-本项目不仅仅是一个单一的工具，而是一套完整的**虚拟化环境可靠性测试解决方案**。它涵盖了从**宿主机内核层 (Host / Hypervisor)** 到 **虚拟机应用层 (Guest OS / User Space)** 的全栈故障注入能力。
+本项目是一套面向云平台可靠性实验的多层次故障注入工具。当前代码同时覆盖 Kubernetes/Chaos Mesh、Hadoop、CloudStack、VM 用户态注入和 KVM/宿主机虚拟化层注入，目标是把原本分散的命令行注入器整合到可配置、可观测、可清理的实验平台中。
 
-项目旨在通过模拟真实的硬件故障（如位翻转）、软件逻辑错误（如死锁、资源耗尽）以及网络异常，来验证云计算平台、操作系统内核以及上层业务的高可用性 (High Availability) 和容错能力。
+## 当前实现范围
 
-主要包含以下核心组件：
-1.  **kvm注入 (KVM-Side)**: 运行在宿主机 (Host)，基于 Linux 内核模块，针对 KVM Hypervisor 和宿主机内核进行注入。**同时包含 Hadoop 和 CloudStack 故障注入工具。**
-2.  **虚拟机注入 (VM-Side)**: 运行在虚拟机内部 (Guest) 或针对 QEMU 进程，模拟应用层、OS 层及资源层的故障。
+| 层次 | 代码位置 | 主要能力 | 当前入口 |
+| --- | --- | --- | --- |
+| Web 控制面 | `web_controller/` | FastAPI 接口、中文前端、历史记录、功能测试编排 | `./start_frontend.sh` 或 `uvicorn web_controller.app:app --host 0.0.0.0 --port 8080` |
+| Kubernetes / Chaos Mesh | `web_controller/k8s_chaos.py` | PodChaos、NetworkChaos、StressChaos、实验状态与清理 | Web 控制台、`/api/action`、`/api/functest` |
+| Hadoop 场景注入 | `kvm_injection/hadoop-fi/` | 进程、网络、资源、HDFS/YARN、MapReduce 故障 | Web 单次动作、`hadoop_injector`、`cluster_controller` |
+| CloudStack 场景注入 | `kvm_injection/cloudstack-fi/` | 管理组件、Agent、API、网络、存储、数据库、SystemVM 故障 | Web 单次动作、`cloudstack_injector`、`cluster_controller` |
+| VM 用户态注入 | `vm_injection/` | 进程、网络、CPU、内存泄漏、内存篡改、寄存器注入 | Web 控制台、`fault_controller`、独立注入器 |
+| KVM 虚拟化层注入 | `vm_injection/kvm_injector.c` 与 `kvm_injection/*` | 软错误、客户机异常行为、性能故障、CPU 热插拔、内核模块实验 | Web 控制台、`kvm_injector`、内核模块 |
 
-### 1.1 适用环境
-- **宿主机**: Mac ARM (M1/M2/M3) + UTM 虚拟化 或 Linux x86_64 + KVM
-- **虚拟机**: Ubuntu 24.04 (支持 ARM64/x86_64)
-- **集群**: 3节点 Hadoop 集群 (1 Master + 2 Slave)
-- **云平台**: CloudStack (可选)
+说明：当前目录名已经统一为英文路径 `web_controller/`、`vm_injection/`、`kvm_injection/`。旧文档中出现的 `虚拟机注入/`、`kvm注入/` 对应现在的 `vm_injection/`、`kvm_injection/`。
 
-## 2. 目录结构说明
+## 目录结构
 
-```
+```text
 .
-├── kvm注入/                        # [核心] 面向 KVM 层的故障注入工具
-│   ├── cpu-fi/                     # CPU 寄存器与执行流注入 (内核模块)
-│   ├── memory-fi/                  # 内存故障注入 (内核模块)
-│   ├── memory-manage-fi/           # 内存管理注入 (内核模块)
-│   ├── access-control-fi/          # 权限控制注入 (内核模块)
-│   ├── file-fi/                    # 文件系统 I/O 注入 (内核模块)
-│   ├── state-query-fi/             # 状态查询注入 (内核模块)
-│   ├── vm-migration-fi/            # 虚拟机热迁移故障注入 (内核模块)
-│   ├── hadoop-fi/                  # [新增] Hadoop 集群故障注入
-│   │   ├── hadoop_injector.c       # Hadoop 故障注入工具
-│   │   └── Makefile
-│   ├── cloudstack-fi/              # [新增] CloudStack 云平台故障注入
-│   │   ├── cloudstack_injector.c   # CloudStack 故障注入工具
-│   │   └── Makefile
-│   ├── cluster_controller.c        # [新增] 集群统一控制器
-│   ├── cluster_manage.sh           # [新增] 集群管理脚本
-│   ├── cluster.conf                # [新增] 集群配置文件
-│   ├── Makefile                    # 编译配置
-│   └── README.md                   # 详细使用说明
-│
-├── 虚拟机注入/                      # 面向 Guest OS 的应用级注入工具
-│   ├── cpu_injector.c              # CPU 争抢与高负载
-│   ├── mem_injector.c              # 内存数据篡改 (ptrace)
-│   ├── network_injector.c          # 网络故障 (延迟/丢包/断网)
-│   ├── process_injector.c          # 进程状态注入 (崩溃/挂起)
-│   ├── fault_controller.c          # 综合故障控制器
-│   ├── run_cluster.sh              # QEMU 虚拟机启动脚本
-│   ├── Makefile                    # 编译配置
-│   └── README.md                   # 详细使用说明
-│
-├── 故障现象.txt                     # 历史测试中观测到的故障现象记录
-├── 环境搭建文档.txt                  # 基础环境搭建参考手册
-└── README.md                       # 本文件
+├── web_controller/              # FastAPI 后端、静态前端、Chaos Mesh 命令构造、功能测试场景
+├── vm_injection/                # VM/Guest 用户态注入器与 kvm_injector
+├── kvm_injection/               # KVM 内核模块、Hadoop/CloudStack 注入器、CLI 集群控制器
+├── docs/system_architecture.md  # 当前架构图和控制流说明
+├── 使用须知.md                   # 环境准备、配置和常用启动流程
+├── Hadoop 故障注入测试说明文档.md
+├── Hadoop 集群环境恢复与启动手册.md
+├── cloudstack测试.md
+└── output/doc/答辩讲述要点与讲稿.md
 ```
 
-## 3. 快速上手指南
+## 快速启动 Web 控制台
 
-### 阶段一：环境准备
-请参考 `环境搭建文档.txt` 配置您的 Linux 服务器 (建议 Ubuntu 24.04)。
-*   **必要组件**: KVM, QEMU, Libvirt, GCC, Make, Kernel Headers。
-*   **架构支持**:
-    *   `kvm注入` 模块主要针对 **ARM64** 架构进行了深度适配 (kprobes/寄存器操作)。
-    *   `虚拟机注入` 工具主要为通用 C 代码，支持 **x86_64** 和 **ARM64**。
-*   **Mac ARM (UTM) 用户**:
-    *   使用 UTM 创建 Ubuntu 24.04 虚拟机
-    *   在虚拟机内部安装 Hadoop 集群
-
-### 阶段二：编译工具
-
-#### 编译 KVM 注入工具（包含 Hadoop/CloudStack）
 ```bash
-# 进入 kvm注入 目录
-cd kvm注入/
+cd /Users/venele/Downloads/fault-injection
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r web_controller/requirements.txt
+./start_frontend.sh
+```
 
-# 使用 Makefile 一键编译所有工具
+默认访问地址是 `http://<宿主机IP>:8080`。`start_frontend.sh` 会先尝试通过 `vm_injection/run_cluster.sh` 拉起 `master`、`slave1`、`slave2` 三台 QEMU 虚拟机，再启动 FastAPI。
+
+也可以只启动后端：
+
+```bash
+uvicorn web_controller.app:app --host 0.0.0.0 --port 8080
+```
+
+## Web 控制器与功能测试
+
+Web 后端读取 `web_controller/config.json`，通过本地命令或 SSH 执行注入器。主要接口：
+
+| 接口 | 作用 |
+| --- | --- |
+| `/api/config` | 返回节点、动作分组、参数定义 |
+| `/api/action` | 执行单个注入动作 |
+| `/api/testcases` | 返回当前功能测试用例 |
+| `/api/functest` | 执行 baseline -> action -> verify -> cleanup 流程 |
+| `/api/history` | 查看历史运行记录 |
+| `/api/health` | 健康检查 |
+
+当前 `web_controller/test_scenarios.py` 中的功能测试用例以 Chaos Mesh、VM、KVM 为主。Hadoop 和 CloudStack 的单次动作仍保留在 `web_controller/app.py` 的 `ACTIONS` 中，可通过 Web 按钮或 `/api/action` 执行。
+
+## Chaos Mesh 支持
+
+当前代码通过 `web_controller/k8s_chaos.py` 直接生成并 `kubectl apply` Chaos Mesh CRD：
+
+| 类型 | 资源 | 动作 |
+| --- | --- | --- |
+| Pod 故障 | `PodChaos` | `pod-kill`、`container-kill` |
+| 网络故障 | `NetworkChaos` | 延迟、抖动、丢包、双向目标探针 |
+| 资源故障 | `StressChaos` | CPU 压力、内存压力 |
+| 管理动作 | `kubectl` | K8s 状态、演示应用部署/删除、Chaos 状态、Chaos 清理 |
+
+默认目标是 `default` 命名空间中带有 `app=nginx-demo` 标签的 Pod。网络实验还使用 `app=fi-net-probe` 的探针 Pod 来观察延迟和丢包效果。`web_controller/config.json` 中的 `kubernetes.kubectl` 可以是普通 `kubectl`，也可以像当前配置一样写成远程命令，例如通过 SSH 调用 master 节点上的 `k3s kubectl`。
+
+## 编译注入器
+
+```bash
+# VM 用户态注入器和 kvm_injector
+cd vm_injection
 make all
 
-# 这将编译:
-# - 所有内核模块 (cpu-fi, memory-fi, file-fi 等)
-# - hadoop-fi/hadoop_injector
-# - cloudstack-fi/cloudstack_injector
-# - cluster_controller
-```
-
-#### 编译虚拟机注入工具
-```bash
-# 进入虚拟机注入目录
-cd 虚拟机注入/
-
-# 编译基础注入器
+# KVM 内核模块、Hadoop、CloudStack 和 cluster_controller
+cd ../kvm_injection
 make all
 ```
 
-### 阶段三：Guest 侧故障模拟 (虚拟机内部)
-如果您希望测试虚拟机内部运行的数据库、Web 服务器或业务进程的健壮性：
-1.  进入目录: `cd 虚拟机注入/`
-2.  编译工具: `make all`
-3.  运行注入:
-    *   **内存泄漏**: `./mem_leak 0 1024` (吞噬 1GB 内存)
-    *   **网络延迟**: `sudo ./network_injector 1 200ms` (增加 200ms 延迟)
-    *   **进程崩溃**: `sudo ./process_injector nginx 1`
+内核模块依赖当前系统的 Linux headers。Ubuntu 上可安装：
 
-### 阶段四：Hadoop 集群故障注入
-Hadoop 故障注入工具位于 `kvm注入/hadoop-fi/` 目录：
 ```bash
-cd kvm注入/hadoop-fi/
+sudo apt install -y build-essential gcc make linux-headers-$(uname -r) iproute2 iptables
+```
 
-# 查看 Hadoop 进程状态
+## 常用命令入口
+
+```bash
+# Hadoop
+cd kvm_injection/hadoop-fi
 ./hadoop_injector list
+sudo ./hadoop_injector crash dn
+sudo ./hadoop_injector delay slave1 200 50
+sudo ./hadoop_injector isolate slave1
+sudo ./hadoop_injector hdfs-safe enter
 
-# 终止 NameNode (测试 HDFS 可用性)
-sudo ./hadoop_injector crash nn
+# CloudStack
+cd kvm_injection/cloudstack-fi
+sudo ./cloudstack_injector list
+sudo ./cloudstack_injector hang agent
+sudo ./cloudstack_injector api-delay 1000
+sudo ./cloudstack_injector network 192.168.1.11 8250
+sudo ./cloudstack_injector storage-ro /tmp/cs_secondary
 
-# 隔离 DataNode 节点 (测试网络分区)
-sudo ./hadoop_injector network 192.168.64.11
+# VM / Guest
+cd vm_injection
+sudo ./network_injector 1 200ms
+sudo ./process_injector nginx 2
+sudo ./cpu_injector 0 20 4
+sudo ./mem_leak 0 512
 
-# 进入 HDFS 安全模式
-./hadoop_injector hdfs-safe enter
+# KVM
+sudo ./kvm_injector list
+sudo ./kvm_injector soft-flip master PC 10
+sudo ./kvm_injector perf-delay slave1 50
+sudo ./kvm_injector clear
 ```
 
-### 阶段五：CloudStack 故障注入
-CloudStack 故障注入工具位于 `kvm注入/cloudstack-fi/` 目录：
-```bash
-cd kvm注入/cloudstack-fi/
+## 风险提示
 
-# 查看 CloudStack 服务状态
-./cloudstack_injector list
+这些工具会修改进程状态、网络规则、cgroup、iptables、KVM 相关行为，部分内核模块可能触发宿主机 Kernel Panic。请只在实验环境运行，注入前先准备快照或可重建镜像；网络、磁盘、cgroup 类故障结束后务必执行清理命令。
 
-# 注入 API 延迟 (500ms)
-sudo ./cloudstack_injector api-delay 500
+更多细节见：
 
-# 终止 Management Server
-sudo ./cloudstack_injector crash ms
-
-# 断开 Agent 连接
-sudo ./cloudstack_injector agent-disconnect
-```
-
-### 阶段六：使用统一控制器
-集群控制器位于 `kvm注入/` 目录：
-```bash
-cd kvm注入/
-# 启动统一控制器
-sudo ./cluster_controller
-
-# 支持的功能：
-# [1] 虚拟机故障注入
-# [2] Hadoop 故障注入
-# [3] CloudStack 故障注入
-# [4] 预设故障场景
-# [5] 查看集群状态
-# [6] 一键恢复所有故障
-```
-
-### 阶段七：Host 侧底层故障模拟 (KVM/内核)
-如果您希望测试虚拟化平台本身的隔离性、热迁移机制或宿主机稳定性：
-1.  进入目录: `cd kvm注入/`
-2.  编译模块: `make` (确保已安装内核头文件)
-3.  加载模块并注入:
-    *   详见该目录下的 `README.md`。
-    *   例如注入 **虚机热迁移** 故障，或 **KVM 寄存器** 状态伪造。
-
-## 4. 故障现象与观测
-在 `故障现象.txt` 中，您可以找到各类注入可能引发的典型症状，例如：
-*   **CPU 注入**: 导致 virsh 命令卡死，最终系统 Crash。
-*   **网络注入**: SSH 连接频繁断开。
-*   **权限注入**: 系统日志出现大量 `Permission denied` 或 `FATAL` 错误。
-*   **Hadoop 故障**: HDFS 文件系统不可用、YARN 任务失败、节点被标记为死亡。
-*   **CloudStack 故障**: API 响应超时、虚拟机创建失败、Agent 断连告警。
-
-## 5. 注意事项
-*    **高风险**: `kvm注入` 修改内核行为，极易导致宿主机 Kernel Panic (死机)。请务必在测试环境中运行，严禁用于生产环境。
-*   **版本兼容**: 部分 KVM 注入模块依赖特定内核符号 (如 `kernel_clone` vs `_do_fork`)，如果加载失败，请根据 `kvm注入/README.md` 中的指南适配当前内核版本。
-*   **快照建议**: 在进行任何故障注入前，建议对虚拟机创建快照，以便快速恢复。
-    *   UTM: 在 UTM 界面右键点击虚拟机 -> "Snapshots" -> "Take Snapshot"
-    *   KVM/virsh: `virsh snapshot-create-as <vm-name> snapshot1`
-*   **网络隔离**: 使用网络故障注入后，请及时清理 iptables 规则，避免影响正常通信。
-*   **权限说明**: 大部分注入工具需要 `sudo` 权限运行。
-
-## 6. 集群配置指南
-
-### 6.1 3节点 Hadoop 集群配置
-推荐的节点配置（**请根据实际环境修改IP地址**）：
-
-| 节点 | IP地址 | 角色 |
-|------|--------|------|
-| master | 192.168.64.10 | NameNode, ResourceManager, SecondaryNameNode |
-| slave1 | 192.168.64.11 | DataNode, NodeManager |
-| slave2 | 192.168.64.12 | DataNode, NodeManager |
-
-> **注意**: 上述 IP 地址 (192.168.64.x) 是 UTM/QEMU 的默认 NAT 网段。如果使用其他虚拟化方案（VirtualBox、VMware、原生KVM等），请修改为实际分配的 IP 地址。
-
-### 6.2 配置文件格式
-修改 `虚拟机注入/cluster.conf` 以匹配您的实际环境。格式：`节点名,IP地址,SSH端口,角色列表`
-```
-# 节点名,IP地址,SSH端口,角色（多个角色用逗号分隔）
-master,192.168.64.10,22,NameNode,ResourceManager
-slave1,192.168.64.11,22,DataNode,NodeManager
-slave2,192.168.64.12,22,DataNode,NodeManager
-```
-
-### 6.3 UTM (Mac ARM) 网络配置
-如果使用 UTM 端口转发模式（通过 localhost 访问虚拟机）：
-```
-master,localhost,2220,NameNode,ResourceManager
-slave1,localhost,2221,DataNode,NodeManager
-slave2,localhost,2222,DataNode,NodeManager
-```
+- `使用须知.md`
+- `web_controller/README.md`
+- `docs/system_architecture.md`
+- `Hadoop 故障注入测试说明文档.md`
+- `cloudstack测试.md`

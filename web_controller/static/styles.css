@@ -225,23 +225,6 @@ body::after {
   gap: 16px;
 }
 
-.overview-status {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.overview-field {
-  display: grid;
-  gap: 6px;
-  min-width: 160px;
-}
-
-.overview-field span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .node-card {
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -424,13 +407,27 @@ button.primary:hover {
 }
 
 button.ghost {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid #bfdbfe;
+}
+
+button.ghost:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: #1d4ed8;
+}
+
+.hero button.ghost {
   background: rgba(255, 255, 255, 0.2);
   color: #f8fafc;
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-button.ghost:hover {
+.hero button.ghost:hover {
   border-color: #fff;
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
 .action-footer {
@@ -441,6 +438,60 @@ button.ghost:hover {
 .history {
   display: grid;
   gap: 16px;
+}
+
+.history-toolbar {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.history-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.history-filter select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  padding: 9px 12px;
+}
+
+.history-summary {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.history-run-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
+.history-empty,
+.history-loading {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  padding: 24px;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.history-error {
+  color: var(--danger);
+  background: #fef2f2;
 }
 
 .history-item {
@@ -613,15 +664,6 @@ button.ghost:hover {
     width: 100%;
   }
 
-  .overview-status {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .overview-field {
-    flex: 1;
-    min-width: 180px;
-  }
 }
 
 /* ================================================================== */

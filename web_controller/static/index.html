@@ -10,7 +10,7 @@
   <title>云平台故障注入工具</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css?v=20260506cloud" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260508history2" />
 </head>
 
 <body>
@@ -33,16 +33,6 @@
           <h2>集群概览</h2>
           <p>当前控制器与节点连接信息。</p>
         </div>
-        <div class="panel-side">
-          <div class="panel-meta" id="outputLimit">输出限制: --</div>
-          <div class="overview-status">
-            <label class="overview-field">
-              <span>命名空间</span>
-              <input id="overviewNamespace" type="text" value="default" />
-            </label>
-            <button class="primary" id="clusterStatus">查看状态</button>
-          </div>
-        </div>
       </div>
       <div class="nodes" id="nodes"></div>
     </section>
@@ -64,9 +54,10 @@
       <div class="panel-head">
         <div>
           <h2>运行历史</h2>
-          <p>展示注入与自动测试的完整过程与结果。</p>
+          <p>仅展示本次进入页面后执行的操作；历史记录可进入数据库历史查看。</p>
         </div>
         <div class="panel-actions">
+          <button class="ghost" id="openHistory">注入历史</button>
           <button class="ghost" id="clearHistory">清空记录</button>
         </div>
       </div>
@@ -76,7 +67,7 @@
 
   <datalist id="nodeList"></datalist>
 
-  <script src="/static/app.js?v=20260506cloud"></script>
+  <script src="/static/app.js?v=20260508history2"></script>
 </body>
 
 </html>

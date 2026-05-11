@@ -1,246 +1,183 @@
-# KVM 故障注入工具套件 (ARM64) 测试
+# KVM 内核模块测试方法
 
-### 1. 访问控制故障 (access-control-fi)
+本文档保留 KVM/内核模块级测试步骤。Web 控制台中常用的 KVM 动作由 `vm_injection/kvm_injector` 提供；本文件面向 `kvm_injection/*-fi/` 下的内核模块实验。
 
-- **功能**: 修改 `ioctl` 系统调用参数，干扰 VM 资源访问。
+## 0. 通用准备
 
-- **测试方法**:
+```bash
+cd /Users/venele/Downloads/fault-injection/kvm_injection
+make all
+uname -r
+sudo grep -E "kernel_clone|vfs_read|vfs_write|handle_mm_fault|kvm_dev_ioctl|kvm_vm_ioctl" /proc/kallsyms
+```
 
-  Bash
+加载模块前先确认目标函数在 `/proc/kallsyms` 中存在。不同内核版本的函数名可能变化，Ubuntu 24.04 的 Linux 6.8+ 尤其需要检查。
 
-  ```
-  # 编译与加载
-  cd access-control-fi
-  make && sudo insmod resource.ko
-  
-  # 触发 (使用配套工具)
-  sudo ./access-load
-  ```
+## 1. CPU 寄存器故障
 
-- **预期结果**:
+目录：`cpu-fi/`
 
-  - 虚拟机进程卡死或崩溃。
-  - `dmesg` 显示: `[ARM-Res-Fi] Intercepted ioctl ....`
+```bash
+cd cpu-fi
+make
+sudo insmod cpu-reg.ko
+dmesg | tail
+sudo ./cpu-reg-main 1
+sudo rmmod cpu_reg
+```
 
-------
+预期：`dmesg` 出现 CPU/寄存器注入日志，目标进程创建路径可能异常。
 
-### 2. CPU 寄存器故障 (cpu-fi)
+## 2. 文件读取故障
 
-- **功能**: 劫持系统调用（如 `clone`），将 PC (Program Counter) 寄存器置零。
+目录：`file-fi/file-read-fi/`
 
-- **测试方法**:
+```bash
+cd file-fi/file-read-fi
+make
+sudo insmod file-read-fi.ko
+sudo ./file-read-fi-main 1
+cat /etc/hosts
+sudo rmmod file_read_fi
+```
 
-  Bash
+预期：读取路径返回异常或 `dmesg` 出现拦截日志。
 
-  ```
-  # 编译与加载 (需先修复 cpu-reg.c 指针类型并增加 read 支持)
-  cd cpu-fi
-  make && sudo insmod cpu-reg-fi.ko
-  
-  # 配置并触发
-  sudo bash -c "echo 1 > /proc/cpu-reg-fi/signal"
-  
-  # 触发任意进程创建
-  ls
-  ```
+## 3. 文件写入故障
 
-- **预期结果**:
+目录：`file-fi/file-write-fi/`
 
-  - `dmesg` 显示: `[ARM-Reg-Fi] Injected SetZero at PC.`
-  - 目标进程可能崩溃。
+```bash
+cd file-fi/file-write-fi
+make
+sudo insmod file-write-fi.ko
+sudo ./file-write-fi-main 1
+echo test > /tmp/fi_write_test
+sudo rmmod file_write_fi
+```
 
-------
+预期：写入失败或 `dmesg` 出现 VFS 写路径注入日志。
 
-### 3. 文件读取故障 (file-read-fi)
+## 4. 缺页处理故障
 
-- **功能**: 拦截 `vfs_read`，注入 Bad Buffer (`buf=NULL`)。
+目录：`memory-fi/pt-load-fi/`
 
-- **测试方法**:
+```bash
+cd memory-fi/pt-load-fi
+make
+sudo insmod pt-load-fi.ko
+sudo ./pt-load-fi-main 0
+ls -R /etc >/dev/null
+sudo rmmod pt_load_fi
+```
 
-  Bash
+预期：内存访问路径返回 OOM 或出现命令卡顿。该测试风险较高。
 
-  ```
-  # 编译与加载
-  cd file-fi/file-read-fi
-  make && sudo insmod file-read-fi.ko
-  
-  # 配置并触发 (使用 load_fi 工具)
-  sudo ./load_fi
-  # 或手动读文件触发
-  cat secret.txt
-  ```
+## 5. 页表/TLB 更新观测
 
-- **预期结果**:
+目录：`memory-fi/pt-update-fi/`
 
-  - 终端报错: `cat: secret.txt: Input/output error.`
-  - `dmesg` 显示: `[ARM-Fi] vfs_read: Force buf=NULL.`
+```bash
+cd memory-fi/pt-update-fi
+make
+sudo insmod pt-update-fi.ko
+stress-ng --vm 1 --vm-bytes 128M -t 5s
+dmesg | tail -n 30
+sudo rmmod pt_update_fi
+```
 
-------
+预期：缺页或页表更新路径出现模块日志。
 
-### 4. 内存缺页处理观测 (pt-update-fi)
+## 6. KVM 状态查询故障
 
-- **功能**: 拦截 `handle_mm_fault`，验证内存管理路径的可观测性。
+目录：`state-query-fi/kvm-state-fi/`
 
-- **测试方法**:
+```bash
+cd state-query-fi/kvm-state-fi
+make
+sudo insmod kvm-state-fi.ko
+qemu-system-aarch64 -nographic -M virt -enable-kvm
+sudo rmmod kvm_state_fi
+```
 
-  Bash
+预期：QEMU 初始化或状态查询失败，`dmesg` 出现 KVM 状态拦截日志。
 
-  ```
-  # 编译与加载 (需修改目标为 handle_mm_fault)
-  cd memory-fi/pt-update-fi
-  make && sudo insmod pt-update-fi.ko
-  
-  # 触发 (高负载触发缺页)
-  stress-ng --vm 1 --vm-bytes 128M -t 5s
-  ```
+## 7. KVM 版本号故障
 
-- **预期结果**:
+目录：`state-query-fi/kvm-version-fi/`
 
-  - `dmesg` 频繁显示: `[PT-Fi] Intercepted handle_mm_fault!.`
+```bash
+cd state-query-fi/kvm-version-fi
+make
+sudo insmod kvm-version-fi.ko
+sudo ./kvm-version-fi-main 1
+qemu-system-aarch64 -nographic -M virt -enable-kvm
+sudo rmmod kvm_version_fi
+```
 
-------
+预期：依赖 KVM API 版本的工具初始化失败或输出异常。
 
-### 5. KVM 状态查询故障 (kvm-state-fi)
+## 8. 热迁移故障
 
-- **功能**: 拦截 `kvm_vcpu_ioctl`，强制返回 `-EIO` 错误。
+目录：`vm-migration-fi/`
 
-- **测试方法**:
+```bash
+cd vm-migration-fi
+make
+sudo insmod vm-migration-fi.ko
+# 在 QEMU monitor 中触发迁移，例如 migrate "exec:cat > /dev/null"
+sudo rmmod vm_migration_fi
+```
 
-  Bash
+预期：迁移失败或脏页日志相关路径异常。
 
-  ```
-  # 编译与加载 (需修改目标为 kvm_vcpu_ioctl)
-  cd state-query-fi/kvm-state-fi
-  make && sudo insmod kvm-state-fi.ko
-  
-  # 触发
-  qemu-system-aarch64 -nographic -M virt -enable-kvm
-  ```
+## 9. 访问控制故障
 
-- **预期结果**:
+目录：`access-control-fi/`
 
-  - QEMU 启动失败或崩溃。
-  - `dmesg` 显示: `[ARM-State-Fi] Intercepted kvm_vcpu_ioctl -> Force Return -EIO.`
+```bash
+cd access-control-fi
+make
+sudo insmod resource.ko
+sudo ./resource-main
+sudo rmmod resource
+```
 
-------
+预期：KVM ioctl 或资源访问路径被拒绝，QEMU 可能报错或停止。
 
-### 6. VM 热迁移故障 (vm-migration-fi)
+## 10. 内存回收/管理故障
 
-- **功能**: 拦截 `kvm_vm_ioctl` (脏页日志获取)，阻断迁移流程。
+目录：`memory-manage-fi/`
 
-- **测试方法**:
+```bash
+cd memory-manage-fi
+make
+sudo insmod memory.ko
+sudo ./memory-main
+sudo rmmod memory
+```
 
-  Bash
+预期：KVM 内存区域或回收路径出现注入日志。该类模块风险高，建议在可恢复虚拟机中测试。
 
-  ```
-  # 编译与加载 (需修改目标为 kvm_vm_ioctl)
-  cd vm-migration-fi
-  make && sudo insmod vm-migration-fi.ko
-  
-  # 触发 (使用 QEMU Monitor 伪迁移)
-  # 在 QEMU Monitor 中输入: migrate "exec:cat > /dev/null"
-  ```
+## 11. 用户态 KVM 注入器补充
 
-- **预期结果**:
+常规演示优先使用 `vm_injection/kvm_injector`：
 
-  - QEMU Monitor 提示 `migration failed`.
-  - `dmesg` 显示: `[ARM-Mig-Fi] Intercepted kvm_vm_ioctl. Forcing -EIO.`
+```bash
+cd ../vm_injection
+sudo ./kvm_injector list
+sudo ./kvm_injector soft-flip master PC 10
+sudo ./kvm_injector perf-delay slave1 50
+sudo ./kvm_injector perf-clear slave1
+sudo ./kvm_injector clear
+```
 
-------
+## 12. 清理 checklist
 
-### 7. KVM 版本号故障 (kvm-version-fi)
+```bash
+lsmod | grep -E 'fi|kvm'
+dmesg | tail -n 80
+sudo ../vm_injection/kvm_injector clear 2>/dev/null || true
+```
 
-- **功能**: 拦截 API Version 查询，将版本 12 篡改为 0。
-
-- **测试方法**:
-
-  Bash
-
-  ```
-  # 编译与加载
-  cd state-query-fi/kvm-version-fi
-  make && sudo insmod kvm-version-fi.ko
-  
-  # 触发
-  qemu-system-aarch64 ... -enable-kvm
-  ```
-
-- **预期结果**:
-
-  - QEMU 报错 `KVM version too old` 或初始化失败。
-  - `dmesg` 显示: `[ARM-Ver-Fi] Intercepted KVM Version Query. Mutated 12 -> 0.`
-
-------
-
-### 8. 文件写入故障 (file-write-fi)
-
-- **功能**: 拦截 `vfs_write`，注入 `Count=0` 或 `Buf=NULL`。
-
-- **测试方法**:
-
-  Bash
-
-  ```
-  # 编译与加载 (Makefile 需修正 obj-m 名称)
-  cd file-fi/file-write-fi
-  make && sudo insmod file-write-fi.ko
-  
-  # 配置并触发 (极快被消耗，需快速操作)
-  sudo bash -c "echo 1 > /proc/file-write-fi/signal"
-  echo "test" > testfile
-  ```
-
-- **预期结果**:
-
-  - `dmesg` 显示: `[ARM-Fi-Write] vfs_write: Force buf=NULL.`
-  - 若注入未被系统进程抢占，命令会报 `Bad address`。
-
-------
-
-### 9. 内存加载故障 (pt-load-fi)
-
-- **功能**: 拦截 `handle_mm_fault`，强制返回 OOM (内存耗尽) 错误。
-
-- **测试方法**:
-
-  Bash
-
-  ```
-  # 编译与加载
-  cd memory-fi/pt-load-fi
-  make && sudo insmod pt-load-fi.ko
-  
-  # 触发 (危险操作)
-  sudo bash -c "echo 0 > /proc/pt-load-fi/type" # Type 0 = OOM
-  sudo bash -c "echo 1 > /proc/pt-load-fi/signal"
-  ls -R /etc
-  ```
-
-- **预期结果**:
-
-  - Shell 卡死、命令被 Kill 或者系统界面无响应。
-  - `dmesg` 显示: `FORCE Return: VM_FAULT_OOM.`
-
-------
-
-### 10. 内存回收守护进程故障 (kswapd-fi)
-
-- **功能**: 拦截 `shrink_node`，将参数置空，试图引发 Panic 或阻止回收。
-
-- **测试方法**:
-
-  Bash
-
-  ```
-  # 编译与加载 (Makefile 需修复)
-  cd memory-manage-fi/kswapd-fi
-  make && sudo insmod kswapd-fi.ko
-  
-  # 触发 (制造内存压力)
-  dd if=/dev/zero of=/dev/shm/fillme bs=1M count=<MemSize>
-  ```
-
-- **预期结果**:
-
-  - 若内核未能防御空指针，系统将重启（Kernel Panic）。
-  - 若内核健壮，`dmesg` 显示 `Force shrink_node(NULL)`
+确认已卸载本次加载的 `.ko`，并恢复 CPU、cgroup、tc、iptables 等系统状态。

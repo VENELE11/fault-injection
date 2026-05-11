@@ -86,7 +86,15 @@ def patch_config(mock_config_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture()
-def client(patch_config) -> TestClient:
+def patch_history_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Patch the history DB path so tests never write into the project tree."""
+    db_path = tmp_path / "fault_history.sqlite3"
+    monkeypatch.setenv("FI_HISTORY_DB", str(db_path))
+    return db_path
+
+
+@pytest.fixture()
+def client(patch_config, patch_history_db) -> TestClient:
     """TestClient with mocked config; imports app lazily to pick up env."""
     # Re-import to ensure env var takes effect
     import importlib
