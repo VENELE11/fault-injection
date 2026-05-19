@@ -619,7 +619,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             },
         ],
         "baseline": [
-            {"title": "操作前自动靶进程", "cmd": "pidfile=/tmp/fi_vm_target_process.pid; if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"; else echo '自动靶进程尚未创建'; fi", "scope": "local"},
+            {"title": "操作前自动靶进程", "cmd": "pidfile=/tmp/fi_vm_target_process.pid; log=/tmp/fi_vm_target_process.log; name=fi_vm_target_process; if [ ! -s \"$pidfile\" ] || ! kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then rm -f \"$pidfile\"; nohup /bin/bash -c 'exec -a \"$1\" sleep 300' _ \"$name\" > \"$log\" 2>&1 & pid=$!; echo \"$pid\" > \"$pidfile\"; sleep 0.2; fi; ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"", "scope": "local"},
         ],
         "action": "vm_process",
         "action_params": {"process": "fi_vm_target_process"},
@@ -676,7 +676,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
         "action": "vm_cpu",
         "action_params": {"pid": 0, "duration": 20, "threads": 0, "cpu_mode": "2"},
         "verify": [
-            {"title": "压力中 CPU 连续采样", "cmd": "for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -eo pid,pcpu,comm,args --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -8; sleep 1; done", "scope": "local", "timeout": 12},
+            {"title": "压力中 CPU 连续采样", "cmd": "for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -eo pid,pcpu,comm,args --sort=-pcpu | awk 'NR==1 || $3 != \"ps\"' | head -8; sleep 1; done", "scope": "local", "timeout": 30},
             {"title": "压力中负载", "cmd": "cat /proc/loadavg 2>/dev/null || uptime", "scope": "local"},
             {"title": "CPU 压力进程", "cmd": "pidfile=/tmp/fi_vm_cpu_stress.pid; if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then ps -o pid,stat,comm,args -p \"$(cat \"$pidfile\")\"; else echo 'cpu_stress_not_running'; fi", "scope": "local"},
             {"title": "CPU 压力日志", "cmd": "if [ -s /tmp/fi_vm_cpu_stress.log ]; then tail -80 /tmp/fi_vm_cpu_stress.log; else echo 'cpu_stress_log_missing_or_empty'; fi", "scope": "local"},
@@ -831,6 +831,8 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             {"name": "ms", "label": "延迟 (ms)", "type": "number", "default": 100, "required": True},
             {"name": "bench_mb", "label": "单轮大小 (MB)", "type": "number", "default": 64, "required": True},
             {"name": "rounds", "label": "轮数", "type": "number", "default": 1, "required": True},
+            {"name": "kvm_guest_user", "label": "VM 用户名", "type": "text", "default": "ubuntu", "required": True},
+            {"name": "kvm_guest_password", "label": "VM 密码", "type": "text", "default": "123456", "required": True},
         ],
         "baseline": [
             {"title": "延迟前目标虚拟机", "cmd": KVM_QEMU_STATUS_CMD, "scope": "local"},
@@ -842,7 +844,7 @@ FUNC_TESTS: List[Dict[str, Any]] = [
             },
         ],
         "action": "kvm_perf_delay",
-        "action_params": {},
+        "action_params": {"kvm_guest_user": "ubuntu", "kvm_guest_password": "123456"},
         "verify": [
             {"title": "延迟后目标虚拟机", "cmd": KVM_QEMU_STATUS_CMD, "scope": "local"},
             {
@@ -858,43 +860,45 @@ FUNC_TESTS: List[Dict[str, Any]] = [
     {
         "key": "test_kvm_perf_stress",
         "title": "KVM CPU 压力测试",
-        "desc": "后台启动 KVM CPU 压力，并在压力运行期间连续采样宿主机 CPU。",
+        "desc": "通过 SSH 在目标 VM 内启动 CPU 压力，并在压力运行期间连续采样 VM 内 CPU。",
         "group": "kvm",
         "params": [
             {"name": "target", "label": "目标节点", "type": "node", "required": True},
             {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 20, "required": True},
-            {"name": "threads", "label": "线程数 (0=全核)", "type": "number", "default": 0, "required": False},
+            {"name": "threads", "label": "线程数 (0 按 1 处理)", "type": "number", "default": 1, "required": False},
+            {"name": "kvm_guest_user", "label": "VM 用户名", "type": "text", "default": "ubuntu", "required": True},
+            {"name": "kvm_guest_password", "label": "VM 密码", "type": "text", "default": "123456", "required": True},
         ],
         "baseline": [
-            {"title": "压力前 CPU 使用率", "cmd": "ps -o pid,pcpu,comm --sort=-pcpu | head -5", "scope": "local"},
-            {"title": "压力前 loadavg", "cmd": "cat /proc/loadavg 2>/dev/null || uptime", "scope": "local"},
+            {"title": "压力前 VM 内 CPU 使用率", "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'ps -o pid,pcpu,comm --sort=-pcpu | head -5'", "scope": "local"},
+            {"title": "压力前 VM 内 loadavg", "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'cat /proc/loadavg 2>/dev/null || uptime'", "scope": "local"},
         ],
         "action": "kvm_perf_stress",
-        "action_params": {},
+        "action_params": {"threads": 1, "kvm_guest_user": "ubuntu", "kvm_guest_password": "123456"},
         "verify": [
             {
-                "title": "压力进程检查",
-                "cmd": "pgrep -af 'cpu_injector|kvm_injector.*perf-stress' || echo 'no_stress_process'",
+                "title": "VM 内压力进程检查",
+                "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'pidfile=/tmp/fi_kvm_guest_cpu_stress.pid; if [ -s \"$pidfile\" ]; then plist=$(tr \" \" \",\" < \"$pidfile\" | sed \"s/^,*//;s/,*$//\"); ps -o pid,stat,pcpu,comm,args -p \"$plist\"; else echo no_guest_stress_process; fi'",
                 "scope": "local",
             },
             {
-                "title": "压力中 CPU 连续采样",
-                "cmd": "for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -o pid,pcpu,comm --sort=-pcpu | head -8; sleep 1; done",
+                "title": "压力中 VM 内 CPU 连续采样",
+                "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'for i in 1 2 3 4 5; do echo SAMPLE_$i; ps -o pid,pcpu,comm,args --sort=-pcpu | head -8; sleep 1; done'",
                 "scope": "local",
-                "timeout": 12,
+                "timeout": 30,
             },
             {
-                "title": "压力中 loadavg",
-                "cmd": "cat /proc/loadavg 2>/dev/null || uptime",
+                "title": "压力中 VM 内 loadavg",
+                "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'cat /proc/loadavg 2>/dev/null || uptime'",
                 "scope": "local",
             },
             {
                 "title": "压力注入日志",
-                "cmd": "if [ -s /tmp/fi_kvm_perf_stress_{target}.log ]; then tail -80 /tmp/fi_kvm_perf_stress_{target}.log; else echo 'stress_log_missing_or_empty'; fi",
+                "cmd": "target='{target}'; case \"$target\" in master) port=2220;; slave1) port=2221;; slave2) port=2222;; *) echo \"unknown target: $target\"; exit 1;; esac; user='{kvm_guest_user}'; password='{kvm_guest_password}'; command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); sshpass -p \"$password\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR -p \"$port\" \"$user@127.0.0.1\" 'if [ -s /tmp/fi_kvm_guest_cpu_stress.log ]; then tail -80 /tmp/fi_kvm_guest_cpu_stress.log; else echo stress_log_missing_or_empty; fi'",
                 "scope": "local",
             },
         ],
-        "cleanup": "kvm_perf_clear",
+        "cleanup": "kvm_guest_cpu_clear",
         "cleanup_params": {},
     },
     {

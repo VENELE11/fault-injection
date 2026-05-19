@@ -7,6 +7,7 @@ if [ -z "$1" ]; then
 fi
 
 NODE=$1
+VM_NAME_PREFIX="${VM_NAME_PREFIX:-ubuntu}"
 
 # === 配置: 根据节点名分配 SSH 端口和 MAC 后缀 ===
 # Master: SSH 2220, IP 192.168.1.10 (需在内部配置)
@@ -26,13 +27,13 @@ else
     exit 1
 fi
 
-echo " 启动节点: $NODE (SSH端口: $HOST_PORT, 内部MAC后缀: $SUFFIX) ..."
+echo " 启动节点: ${VM_NAME_PREFIX}_$NODE (SSH端口: $HOST_PORT, 内部MAC后缀: $SUFFIX) ..."
 
 # === 启动命令 (双网卡模式) ===
 # net0 (User Mode): 负责连接外网 + 宿主机 SSH 端口转发
 # net1 (Socket Mode): 负责集群内部多播通信 (模拟内网交换机)
 qemu-system-aarch64 \
-  -name "alpine_$NODE" \
+  -name "${VM_NAME_PREFIX}_$NODE" \
   -M virt,accel=kvm \
   -cpu host \
   -m 2048 \

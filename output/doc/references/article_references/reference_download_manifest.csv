@@ -1,0 +1,27 @@
+ref,title,status,saved_as,source,url,note
+1,Exploring the impact of chaos engineering with various user loads on cloud native applications,ok,ref01_al-said-ahmad-2024-cloud-native-chaos.pdf,Springer Nature PDF,https://link.springer.com/content/pdf/10.1007/s00607-024-01292-z.pdf,already present
+2,Scalability resilience framework using application-level fault injection for cloud-based software services,ok,ref02_al-said-ahmad-2022-application-level-fault-injection.pdf,Springer Nature PDF,https://link.springer.com/content/pdf/10.1186/s13677-021-00277-z.pdf,already present
+3,A review of resilience testing in microservices architectures,not_downloaded,,IEEE Xplore landing page,https://ieeexplore.ieee.org/document/10903891,全文/PDF未开放或站点拒绝下载；按要求不再下载
+4,Harnessing chaos,ok,ref04_yadav-2024-harnessing-chaos.pdf,IJCTT PDF,https://ijcttjournal.org/Volume-72%20Issue-6/IJCTT-V72I6P104.pdf,already present
+5,ChaosTwin,not_downloaded,,IEEE Xplore landing page,https://ieeexplore.ieee.org/document/9615519,全文/PDF未开放或站点拒绝下载；按要求不再下载
+6,On evaluating self-adaptive and self-healing systems using chaos engineering,ok,ref06_naqvi-2022-self-adaptive-chaos-engineering.pdf,arXiv PDF,https://arxiv.org/pdf/2208.13227,already present
+7,CloudStrike,ok,ref07_torkura-2020-cloudstrike.pdf,IEEE Xplore open-access PDF,https://ieeexplore.ieee.org/ielx7/6287639/8948470/09133399.pdf?arnumber=9133399,already present
+8,Fault injection techniques and tools,ok,ref08_hsueh-1997-fault-injection-techniques.pdf,NASA NTRS PDF,https://ntrs.nasa.gov/api/citations/19970022435/downloads/19970022435.pdf,already present
+9,Assessing dependability with software fault injection,not_downloaded,,DBLP record,https://dblp.org/rec/journals/csur/NatellaCM16.html,全文/PDF未开放或站点拒绝下载；按要求不再下载
+10,Simple testing can prevent most critical failures,ok,ref10_yuan-2014-simple-testing-critical-failures.pdf,USENIX PDF,https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-yuan.pdf,already present
+11,Chaos engineering,ok,ref11_basiri-2016-chaos-engineering.pdf,arXiv PDF,https://arxiv.org/pdf/1702.05843,already present
+12,FATE and DESTINI,not_downloaded,,UW ADSL publication page,https://research.cs.wisc.edu/adsl/Publications/fate-destini-nsdi11.html,全文/PDF未开放或站点拒绝下载；按要求不再下载
+13,Probing the guts of Kprobes,ok,ref13_mavinakayanahalli-2006-kprobes.pdf,Linux Symposium PDF,https://www.kernel.org/doc/ols/2006/ols2006v2-pages-109-124.pdf,already present
+14,Fault injection analytics,ok,ref14_cotroneo-2022-fault-injection-analytics.pdf,arXiv PDF,https://arxiv.org/pdf/2010.00331,already present
+15,KVM: the Linux virtual machine monitor,ok,ref15_kivity-2007-kvm.pdf,Linux Symposium PDF,https://www.kernel.org/doc/ols/2007/ols2007v1-pages-225-230.pdf,already present
+16,KVM/ARM,ok,ref16_dall-2014-kvm-arm.pdf,Columbia PDF,https://www.cs.columbia.edu/~nieh/pubs/asplos2014_kvmarm.pdf,already present
+17,QEMU,ok,ref17_bellard-2005-qemu.pdf,USENIX PDF,https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/freenix/full_papers/bellard/bellard.pdf,already present
+18,Performance evaluation of container orchestration tools,not_downloaded,,PubMed record,https://pubmed.ncbi.nlm.nih.gov/37112349/,全文/PDF未开放或站点拒绝下载；按要求不再下载
+19,Profiling lightweight container platforms,ok,ref19_bohm-2021-lightweight-container-platforms.pdf,CEUR-WS PDF,https://ceur-ws.org/Vol-2839/paper11.pdf,already present
+20,Maximizing error injection realism,ok,ref20_zhang-2022-error-injection-realism.pdf,arXiv PDF,https://arxiv.org/pdf/2006.04444,already present
+21,"Borg, Omega, and Kubernetes",not_downloaded,,DBLP record,https://dblp.org/rec/journals/cacm/BurnsGOBW16.html,全文/PDF未开放或站点拒绝下载；按要求不再下载
+22,A platform for automating chaos experiments,not_downloaded,,researchr record,https://researchr.org/publication/BlohowiakBHR16,全文/PDF未开放或站点拒绝下载；按要求不再下载
+23,Observability and chaos engineering on system calls,ok,ref23_simonsson-2021-chaosorca.pdf,arXiv PDF,https://arxiv.org/pdf/1907.13039,already present
+24,Resilience evaluation of Kubernetes,ok,ref24_chen-2025-kubernetes-failure-injection.pdf,arXiv PDF,https://arxiv.org/pdf/2507.16109,already present
+25,LLM-powered fully automated chaos engineering,ok,ref25_kikuta-2025-chaoseater.pdf,arXiv PDF,https://arxiv.org/pdf/2511.07865,already present
+26,Chaos testing,ok,ref26_pareek-2024-chaos-testing-framework.pdf,IJSR PDF,https://www.ijsr.net/archive/v13i11/SR241110081650.pdf,already present

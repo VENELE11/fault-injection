@@ -1,0 +1,824 @@
+<!DOCTYPE HTML>
+<!--
+Linear by TEMPLATED
+templated.co @templatedco
+Released for free under the Creative Commons Attribution 3.0 license (templated.co/license)
+  -->
+
+
+
+
+
+<html lang="en">
+<head>
+	<title>QEMU version 9.2.0 released - QEMU</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="description" content="" />
+	<meta name="keywords" content="" />
+	<meta name="viewport" content="width=device-width">
+	<link href='https://fonts.googleapis.com/css?family=Roboto+Mono:300,400%7cRoboto:300,400,500' rel='stylesheet' type='text/css'>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="../../../../assets/favicons/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="../../../../assets/favicons/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="../../../../assets/favicons/favicon-16x16.png">
+	<link rel="manifest" href="../../../../assets/favicons/manifest.json">
+	<link rel="mask-icon" href="../../../../assets/favicons/safari-pinned-tab.svg" color="#5bbad5">
+	<meta name="msapplication-config" content="../../../../assets/favicons/browserconfig.xml">
+	<meta name="theme-color" content="#ffffff">
+
+	<link rel="stylesheet" href="../../../../assets/css/normalize.css" />
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
+	<link rel="stylesheet" href="../../../../assets/css/skel-noscript.css?v=2" />
+	<link rel="stylesheet" href="../../../../assets/css/style.css?v=2" />
+	<link rel="stylesheet" href="../../../../assets/css/style-mobile.css?v=2" media="(max-width:699px)"/>
+	<link rel="stylesheet" href="../../../../assets/css/style-desktop.css?v=2" media="(min-width:700px)" />
+	<link rel="alternate" title="QEMU Blog (Atom feed)" href="../../../../feed.xml" type="application/atom+xml" />
+	
+
+</head>
+<body>
+
+		<!-- Nav -->
+	<nav id="nav">
+		<ul>
+			
+			<li><a href="../../../../">Home</a>
+			
+			</li><li ><a href="../../../../download">Download</a>
+			</li><li ><a href="../../../../support">Support</a>
+			</li><li ><a href="../../../../contribute">Contribute</a>
+			</li><li ><a href="../../../../documentation">Docs</a>
+			</li><li><a href="https://wiki.qemu.org">Wiki</a>
+			</li><li ><a href="../../../../blog">Blog</a></li>
+		</ul>
+	</nav>
+
+<script>
+(() => {
+	document.body.classList.add('js');
+
+	// Cache DOM elements
+	const nav = document.getElementById('nav');
+	nav.insertAdjacentHTML('beforebegin',
+		'<div id="titleBar"><div><button role="button" aria-pressed="false" aria-controls="nav" aria-label="Toggle navigation bar"><span class="fa fa-lg fa-bars"></span></button></div></div>');
+
+	const navButton = document.querySelector('button[aria-controls="nav"]');
+	const titleBar = document.getElementById('titleBar');
+	let initNav = false;
+
+	navButton.addEventListener('click', () => {
+		if (!initNav) {
+			const titleBarDiv = document.querySelector('#titleBar > div');
+			nav.style.transition = 'margin-left 0.4s';
+			titleBarDiv.style.transition = 'margin-left 0.4s';
+			initNav = true;
+		}
+
+		const isPressed = navButton.getAttribute('aria-pressed') === 'true';
+		navButton.setAttribute('aria-pressed', !isPressed);
+		titleBar.classList.toggle('open', !isPressed);
+	});
+})();
+</script>
+
+	<div id="main">
+		<div class="container">
+			<!-- Main -->
+	<section>
+		<header>
+			<h1>QEMU version 9.2.0 released</h1>
+			<div class="posted">11 Dec 2024</div>
+		</header>
+		<p>We’d like to announce the availability of the QEMU 9.2.0 release. This release contains 1700+ commits from 209 authors.</p>
+
+<p>You can grab the tarball from our <a href="https://www.qemu.org/download/#source">download page</a>. The full list of changes are available <a href="https://wiki.qemu.org/ChangeLog/9.2">in the changelog</a>.</p>
+
+<p>Highlights include:</p>
+
+<ul>
+  <li>virtio-gpu: support for 3D acceleration of Vulkan applications via Venus Vulkan driver in the guest and virglrenderer host library</li>
+  <li>crypto: GLib crypto backend now supports SHA-384 hashes</li>
+  <li>migration: QATzip-accelerated compression support while using multiple migration streams</li>
+  <li>Rust: experimental support for device models written in Rust (for development use only)</li>
+  <li>ARM: emulation support for FEAT_EBF16, FEAT_CMOW architecture features</li>
+  <li>ARM: support for two-stage SMMU translation for sbsa-ref and virt boards</li>
+  <li>ARM: support for CPU Security Extensions for xilinx-zynq-a9 board</li>
+  <li>ARM: 64GB+ memory support when using HVF acceleration on newer Mac systems</li>
+  <li>HPPA: SeaBIOS-hppa v17 firmware with various fixes and enhancements</li>
+  <li>RISC-V: IOMMU support for virt machine</li>
+  <li>RISC-V: support for control flow integrity and Svvptc extensions, and support for Bit-Manipulation extension on OpenTitan boards</li>
+  <li>RISC-V: improved performance for vector unit-stride/whole register ld/st instructions</li>
+  <li>s390x: support for booting from other devices if the previous ones fail</li>
+  <li>x86: support for new nitro-enclave machine type that can emulate AWS Nitro Enclave and can boot from Enclave Image Format files.</li>
+  <li>x86: KVM support for enabling AVX10, as well as enabling specific AVX10 versions via command-line</li>
+  <li>and lots more…</li>
+</ul>
+
+<p>Thank you to everybody who contributed to this release, whether that was by writing code, reporting bugs, improving documentation, testing, or providing the project with CI resources. We couldn’t do these without you!</p>
+
+		<ul class="category">
+		
+		<li><span class="fa fa-folder"></span><a href="/blog/category/releases/index.html">releases</a></li>
+		
+		<li><span class="fa fa-folder"></span><a href="/blog/category/qemu-9-2/index.html">qemu 9.2</a></li>
+		
+		</ul>
+	</section>
+
+		</div>
+	</div>
+	
+	
+<!-- Sidebar -->
+<div id="sidebar">
+<div class="container">
+	<section>
+		<header>
+			<h1>Recent Posts</h1>
+		</header>
+		<ul class="style">
+		
+			<li>
+				<a href="../../../../2026/04/22/qemu-11-0-0/">QEMU version 11.0.0 released</a><br/>
+				<span class="posted">22 Apr 2026</span>
+			</li>
+		
+			<li>
+				<a href="../../../../2026/02/20/gsoc-2026/">Announcing QEMU Google Summer of Code 2026 internships</a><br/>
+				<span class="posted">20 Feb 2026</span>
+			</li>
+		
+		</ul>
+	</section>
+
+
+	<section>
+		<header>
+			<h1>Archives</h1>
+		</header>
+		<ul class="style">
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2026/04/">April 2026 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2026/02/">February 2026 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2025/12/">December 2025 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2025/11/">November 2025 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2025/08/">August 2025 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2025/04/">April 2025 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2025/03/">March 2025 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2024/12/">December 2024 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2024/09/">September 2024 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2024/05/">May 2024 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2024/04/">April 2024 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2023/12/">December 2023 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2023/08/">August 2023 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2023/04/">April 2023 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2023/03/">March 2023 (2)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2023/02/">February 2023 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/12/">December 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/11/">November 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/08/">August 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/04/">April 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/03/">March 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2022/02/">February 2022 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/12/">December 2021 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/08/">August 2021 (3)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/04/">April 2021 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/03/">March 2021 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/02/">February 2021 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2021/01/">January 2021 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/12/">December 2020 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/11/">November 2020 (2)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/09/">September 2020 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/08/">August 2020 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/07/">July 2020 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/04/">April 2020 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2020/02/">February 2020 (2)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/12/">December 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/11/">November 2019 (3)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/08/">August 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/05/">May 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/04/">April 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/02/">February 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2019/01/">January 2019 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/12/">December 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/08/">August 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/06/">June 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/05/">May 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/04/">April 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/02/">February 2018 (3)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2018/01/">January 2018 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/11/">November 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/10/">October 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/09/">September 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/08/">August 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/05/">May 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/03/">March 2017 (1)</a></li>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<li><a href="../../../../blog/2017/02/">February 2017 (2)</a></li>
+		</ul>
+	</section>
+</div>
+</div>
+
+	<div id="footer">
+	<div id="external-links">
+		<ul class="style">
+			<li><a href="http://qemu-advent-calendar.org">Advent calendar</a></li>
+			<li><a href="https://planet.virt-tools.org/">Blog planet</a></li>
+			<li><a href="https://www.linux-kvm.org/">KVM</a></li>
+			<li><a href="http://libguestfs.org/">Libguestfs</a></li>
+			<li><a href="https://libvirt.org/">Libvirt</a></li>
+			<li><a href="https://xenproject.org">Xen</a></li>
+		</ul>
+	</div>
+	<div id="edit-page">
+		<a href="https://gitlab.com/qemu-project/qemu-web/-/blob/master/_posts/2024-12-11-qemu-9-2-0.md">page source</a>
+	</div>
+	<div id="conservancy">
+		QEMU is a member of <a href="../../../../conservancy/">Software Freedom Conservancy</a>
+	</div>
+	<div id="sponsors">
+		QEMU has <a href="../../../../sponsors/">sponsors</a>
+	</div>
+	<div id="licenses">
+		<a href="../../../../license.html">Website licenses</a>
+	</div>
+</div>
+
+
+</body>
+</html>

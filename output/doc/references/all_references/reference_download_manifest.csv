@@ -1,0 +1,27 @@
+ref,title,status,saved_as,source,url,note
+1,Exploring the impact of chaos engineering with various user loads on cloud native applications,ok,ref01_al-said-ahmad-2024-cloud-native-chaos.pdf,Springer Nature PDF,https://link.springer.com/content/pdf/10.1007/s00607-024-01292-z.pdf,already present
+2,Scalability resilience framework using application-level fault injection for cloud-based software services,ok,ref02_al-said-ahmad-2022-application-level-fault-injection.pdf,Springer Nature PDF,https://link.springer.com/content/pdf/10.1186/s13677-021-00277-z.pdf,already present
+3,A review of resilience testing in microservices architectures,ok,ref03_mailewa-2025-microservices-resilience-testing.html,IEEE Xplore landing page,https://ieeexplore.ieee.org/document/10903891,already present
+4,Harnessing Chaos: The Role of Chaos Engineering in Cloud Applications and Impacts on Site Reliability Engineering,ok,ref04_yadav-2024-harnessing-chaos.pdf,IJCTT PDF,https://ijcttjournal.org/Volume-72%20Issue-6/IJCTT-V72I6P104.pdf,already present
+5,ChaosTwin: A chaos engineering and digital twin approach for the design of resilient IT services,ok,ref05_poltronieri-2021-chaostwin.html,IEEE Xplore landing page,https://ieeexplore.ieee.org/document/9615519,already present
+6,On evaluating self-adaptive and self-healing systems using chaos engineering,ok,ref06_naqvi-2022-self-adaptive-chaos-engineering.pdf,arXiv PDF,https://arxiv.org/pdf/2208.13227,already present
+7,CloudStrike: chaos engineering for security and resiliency in cloud infrastructure,ok,ref07_torkura-2020-cloudstrike.pdf,IEEE Xplore open-access PDF,https://ieeexplore.ieee.org/ielx7/6287639/8948470/09133399.pdf?arnumber=9133399,already present
+8,Chaos engineering in 2024 with LitmusChaos,ok,ref08_cncf-2024-litmuschaos.html,CNCF blog,https://www.cncf.io/blog/2024/03/19/chaos-engineering-in-2024-with-litmuschaos/,already present
+9,Chaos Mesh overview,ok,ref09_chaos-mesh-overview.html,Chaos Mesh docs,https://chaos-mesh.org/docs/,already present
+10,Basic features,ok,ref10_chaos-mesh-basic-features.html,Chaos Mesh docs,https://chaos-mesh.org/docs/basic-features/,already present
+11,Faults and actions in Azure Chaos Studio,ok,ref11_azure-chaos-studio-faults-actions.html,Microsoft Learn,https://learn.microsoft.com/en-us/azure/chaos-studio/chaos-studio-faults-actions,already present
+12,Azure Chaos Studio fault and action library,ok,ref12_azure-chaos-studio-fault-library.html,Microsoft Learn,https://learn.microsoft.com/en-us/azure/chaos-studio/chaos-studio-fault-library,already present
+13,Kernel probes (Kprobes),ok,ref13_linux-kernel-kprobes.html,Linux Kernel docs,https://docs.kernel.org/trace/kprobes.html,already present
+14,Fault injection capabilities infrastructure,ok,ref14_linux-kernel-fault-injection.html,Linux Kernel docs,https://docs.kernel.org/fault-injection/fault-injection.html,already present
+15,The definitive KVM API documentation,ok,ref15_linux-kernel-kvm-api.html,Linux Kernel docs,https://docs.kernel.org/virt/kvm/api.html,already present
+16,ARM KVM documentation,ok,ref16_linux-kernel-arm-kvm.html,Linux Kernel docs,https://docs.kernel.org/virt/kvm/arm/index.html,already present
+17,QEMU version 9.2.0 released,ok,ref17_qemu-9-2-0-release.html,QEMU project,https://www.qemu.org/2024/12/11/qemu-9-2-0/,already present
+18,K3s - Lightweight Kubernetes,ok,ref18_k3s-lightweight-kubernetes.html,K3s docs,https://docs.k3s.io/,already present
+19,K3s requirements,ok,ref19_k3s-requirements.html,K3s docs,https://docs.k3s.io/installation/requirements,already present
+20,Create Chaos Mesh Workflow,ok,ref20_chaos-mesh-workflow.html,Chaos Mesh docs,https://chaos-mesh.org/docs/create-chaos-mesh-workflow/,already present
+21,Kubernetes Pods,ok,ref21_kubernetes-pods.html,Kubernetes docs,https://kubernetes.io/docs/concepts/workloads/pods/,already present
+22,Gremlin fault injection,ok,ref22_gremlin-fault-injection.html,Gremlin docs,https://www.gremlin.com/docs/fault-injection-overview,already present
+23,Observability and chaos engineering on system calls for containerized applications in Docker,ok,ref23_simonsson-2021-chaosorca.pdf,arXiv PDF,https://arxiv.org/pdf/1907.13039,already present
+24,Resilience evaluation of Kubernetes in cloud-edge environments via failure injection,ok,ref24_chen-2025-kubernetes-failure-injection.pdf,arXiv PDF,https://arxiv.org/pdf/2507.16109,already present
+25,LLM-powered fully automated chaos engineering,ok,ref25_kikuta-2025-chaoseater.pdf,arXiv PDF,https://arxiv.org/pdf/2511.07865,already present
+26,Chaos testing: a proactive framework for system resilience in distributed architectures,ok,ref26_pareek-2024-chaos-testing-framework.pdf,IJSR PDF,https://www.ijsr.net/archive/v13i11/SR241110081650.pdf,already present

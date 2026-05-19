@@ -15,12 +15,8 @@ mkdir -p "$LOG_DIR"
 
 is_vm_running() {
   local node="$1"
-  local pattern="qemu-system-aarch64.*alpine_${node}"
-  if command -v pgrep >/dev/null 2>&1; then
-    pgrep -f "$pattern" >/dev/null 2>&1
-    return $?
-  fi
-  ps aux | grep -v grep | grep -E "$pattern" >/dev/null 2>&1
+  local name_pattern="(-name(=| )[^ ]*(guest=)?(ubuntu_|alpine_|kvm_|vm_)?${node}([, ]|$)|(node_|ubuntu_|alpine_|kvm_|vm_)${node}[.]qcow2)"
+  ps -ww -eo args= | grep -E '[q]emu-system|[q]emu-kvm' | grep -E -- "$name_pattern" >/dev/null 2>&1
 }
 
 start_vm() {

@@ -1458,13 +1458,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
                 "required": True,
             },
         ],
-        "cmds": lambda ctx, params: [
-            [
-                ctx["vm_process_injector"],
-                params["process"],
-                {"crash": "1", "hang": "2", "resume": "3"}[params["proc_action"]],
-            ]
-        ],
+        "cmds": lambda ctx, params: _build_vm_process_cmd(ctx, params),
         "tool": "vm_process_injector",
         "sudo": "vm",
         "danger": True,
@@ -1777,7 +1771,7 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
     },
     "kvm_perf_stress": {
         "title": "KVM 性能故障 - CPU 压力",
-        "desc": "注入 CPU 高负载，模拟资源争抢。",
+        "desc": "在目标虚拟机内注入 CPU 高负载，模拟客户机资源争抢。",
         "group": "kvm",
         "scope": "local",
         "params": [
@@ -1791,16 +1785,34 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
                 "kvm_target": True,
             },
             {"name": "duration", "label": "持续时间 (秒)", "type": "number", "default": 10, "required": True},
-            {"name": "threads", "label": "线程数 (可选)", "type": "number", "required": False},
+            {"name": "threads", "label": "线程数 (0 按 1 处理)", "type": "number", "default": 1, "required": False},
+            {"name": "kvm_guest_user", "label": "VM 用户名", "type": "text", "default": "ubuntu", "required": True},
+            {"name": "kvm_guest_password", "label": "VM 密码", "type": "text", "default": "123456", "required": True},
         ],
-        "cmds": lambda ctx, params: (
-            [[ctx["kvm_injector"], "perf-stress", str(params["target"]), str(params["duration"]), str(params["threads"])]]
-            if params.get("threads") is not None
-            else [[ctx["kvm_injector"], "perf-stress", str(params["target"]), str(params["duration"])]]
-        ),
-        "tool": "kvm_injector",
-        "sudo": "kvm",
+        "cmds": lambda ctx, params: _build_kvm_guest_cpu_stress_cmd(params),
+        "sudo": False,
         "danger": True,
+    },
+    "kvm_guest_cpu_clear": {
+        "title": "清理 KVM VM 内 CPU 压力",
+        "desc": "停止目标虚拟机内由测试启动的 CPU 压力进程。",
+        "group": "kvm",
+        "scope": "local",
+        "params": [
+            {
+                "name": "target",
+                "label": "目标虚拟机",
+                "type": "text",
+                "default": "master",
+                "required": True,
+                "placeholder": "master / slave1 / slave2",
+                "kvm_target": True,
+            },
+            {"name": "kvm_guest_user", "label": "VM 用户名", "type": "text", "default": "ubuntu", "required": True},
+            {"name": "kvm_guest_password", "label": "VM 密码", "type": "text", "default": "123456", "required": True},
+        ],
+        "cmds": lambda ctx, params: _build_kvm_guest_cpu_clear_cmd(params),
+        "sudo": False,
     },
     "kvm_perf_clear": {
         "title": "KVM 性能故障 - 清理",
@@ -1979,6 +1991,103 @@ ACTIONS: Dict[str, Dict[str, Any]] = {
         "sudo": "cloudstack",
     },
 }
+
+
+def _build_vm_process_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:
+    process = str(params["process"]).strip()
+    action_code = {"crash": "1", "hang": "2", "resume": "3"}[params["proc_action"]]
+
+    if process != "fi_vm_target_process":
+        return [[ctx["vm_process_injector"], process, action_code]]
+
+    tool = shlex.quote(ctx["vm_process_injector"])
+    cmd = (
+        "pidfile=/tmp/fi_vm_target_process.pid; "
+        "log=/tmp/fi_vm_target_process.log; "
+        "name=fi_vm_target_process; "
+        "if [ ! -s \"$pidfile\" ] || ! kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then "
+        "rm -f \"$pidfile\"; "
+        "nohup /bin/bash -c 'exec -a \"$1\" sleep 300' _ \"$name\" > \"$log\" 2>&1 & "
+        "pid=$!; echo \"$pid\" > \"$pidfile\"; sleep 0.2; "
+        "fi; "
+        "target=\"$name\"; "
+        "if [ -s \"$pidfile\" ] && kill -0 \"$(cat \"$pidfile\")\" 2>/dev/null; then target=$(cat \"$pidfile\"); fi; "
+        f"{tool} \"$target\" {action_code}; "
+        "rc=$?; "
+        f"if [ \"$rc\" -eq 0 ] && [ \"{action_code}\" = \"1\" ]; then rm -f \"$pidfile\"; fi; "
+        "exit \"$rc\""
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
+def _build_kvm_guest_ssh_cmd(params: Dict[str, Any], remote_script: str) -> List[List[str]]:
+    target = str(params.get("target", "master")).strip()
+    user = str(params.get("kvm_guest_user", "ubuntu")).strip() or "ubuntu"
+    password = str(params.get("kvm_guest_password", "123456"))
+    cmd = (
+        f"target={shlex.quote(target)}; "
+        "case \"$target\" in "
+        "master) port=2220;; "
+        "slave1) port=2221;; "
+        "slave2) port=2222;; "
+        "*) echo \"unknown target: $target\"; exit 1;; "
+        "esac; "
+        f"user={shlex.quote(user)}; "
+        f"password={shlex.quote(password)}; "
+        "command -v sshpass >/dev/null || (echo 'sshpass_missing: 请先安装 sshpass'; exit 1); "
+        "sshpass -p \"$password\" ssh "
+        "-o StrictHostKeyChecking=no "
+        "-o UserKnownHostsFile=/dev/null "
+        "-o ConnectTimeout=5 "
+        "-o LogLevel=ERROR "
+        "-p \"$port\" \"$user@127.0.0.1\" "
+        f"/bin/bash -lc {shlex.quote(remote_script)}"
+    )
+    return [["/bin/sh", "-lc", cmd]]
+
+
+def _build_kvm_guest_cpu_stress_cmd(params: Dict[str, Any]) -> List[List[str]]:
+    duration = int(params["duration"])
+    threads = int(params.get("threads", 1) or 1)
+    if threads <= 0:
+        threads = 1
+    remote_script = (
+        "pidfile=/tmp/fi_kvm_guest_cpu_stress.pid; "
+        "log=/tmp/fi_kvm_guest_cpu_stress.log; "
+        "if [ -s \"$pidfile\" ]; then "
+        "for pid in $(cat \"$pidfile\"); do kill \"$pid\" 2>/dev/null || true; done; "
+        "rm -f \"$pidfile\"; "
+        "fi; "
+        ": > \"$log\"; "
+        f"duration={duration}; threads={threads}; "
+        "pids=''; i=1; "
+        "while [ \"$i\" -le \"$threads\" ]; do "
+        "nohup /bin/bash -c 'duration=\"$1\"; end=$((SECONDS + duration)); while [ \"$SECONDS\" -lt \"$end\" ]; do :; done' _ \"$duration\" >> \"$log\" 2>&1 & "
+        "pids=\"$pids $!\"; i=$((i+1)); "
+        "done; "
+        "echo \"$pids\" > \"$pidfile\"; "
+        f"echo '[guest_cpu_stress] started target={shlex.quote(str(params.get('target', 'master')))} duration={duration} threads={threads} pids:' \"$pids\""
+    )
+    return _build_kvm_guest_ssh_cmd(params, remote_script)
+
+
+def _build_kvm_guest_cpu_clear_cmd(params: Dict[str, Any]) -> List[List[str]]:
+    remote_script = (
+        "pidfile=/tmp/fi_kvm_guest_cpu_stress.pid; "
+        "log=/tmp/fi_kvm_guest_cpu_stress.log; "
+        "if [ -s \"$pidfile\" ]; then "
+        "pids=$(cat \"$pidfile\"); "
+        "for pid in $pids; do kill \"$pid\" 2>/dev/null || true; done; "
+        "sleep 0.5; "
+        "for pid in $pids; do kill -9 \"$pid\" 2>/dev/null || true; done; "
+        "rm -f \"$pidfile\"; "
+        "echo '[guest_cpu_stress] stopped pids:' \"$pids\"; "
+        "else "
+        "echo '[guest_cpu_stress] no running process'; "
+        "fi; "
+        "tail -20 \"$log\" 2>/dev/null || true"
+    )
+    return _build_kvm_guest_ssh_cmd(params, remote_script)
 
 
 def _build_vm_cpu_start_cmd(ctx: Dict[str, Any], params: Dict[str, Any]) -> List[List[str]]:

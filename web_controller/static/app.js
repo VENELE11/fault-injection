@@ -615,7 +615,7 @@ function renderResourceFocusCard(data) {
         tips.push(`VM 内任务速度变化较小 (${beforeMb.toFixed(1)} → ${afterMb.toFixed(1)} MB/s)`);
       }
     } else {
-      tips.push("未解析到 VM 内 CPU+dd 速度，请检查 sshpass、root/123456 登录或节点 SSH 端口");
+      tips.push("未解析到 VM 内 CPU+dd 速度，请检查 sshpass、ubuntu/123456 登录或节点 SSH 端口");
     }
   }
 

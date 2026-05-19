@@ -1,0 +1,5312 @@
+ <!DOCTYPE html>
+		<html
+			class="layout layout-holy-grail   show-table-of-contents conceptual show-breadcrumb default-focus"
+			lang="en-us"
+			dir="ltr"
+			data-authenticated="false"
+			data-auth-status-determined="false"
+			data-target="docs"
+			x-ms-format-detection="none"
+		>
+			
+		<head>
+			<title>Azure Chaos Studio fault and action library - Azure Chaos Studio | Microsoft Learn</title>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+			<meta name="color-scheme" content="light dark" />
+
+			<meta name="description" content="Understand the available actions you can use with Azure Chaos Studio, including any prerequisites and parameters." />
+			<link rel="canonical" href="https://learn.microsoft.com/en-us/azure/chaos-studio/chaos-studio-fault-library" /> 
+
+			<!-- Non-customizable open graph and sharing-related metadata -->
+			<meta name="twitter:card" content="summary_large_image" />
+			<meta name="twitter:site" content="@MicrosoftLearn" />
+			<meta property="og:type" content="website" />
+			<meta property="og:image:alt" content="Microsoft Learn" />
+			<meta property="og:image" content="https://learn.microsoft.com/en-us/media/open-graph-image.png" />
+			<!-- Page specific open graph and sharing-related metadata -->
+			<meta property="og:title" content="Azure Chaos Studio fault and action library - Azure Chaos Studio" />
+			<meta property="og:url" content="https://learn.microsoft.com/en-us/azure/chaos-studio/chaos-studio-fault-library" />
+			<meta property="og:description" content="Understand the available actions you can use with Azure Chaos Studio, including any prerequisites and parameters." />
+			<meta name="platform_id" content="95e0e70f-6985-7c84-5096-e92527a21c5f" /> <meta name="scope" content="Azure,Chaos Studio" />
+			<meta name="locale" content="en-us" />
+			 
+			<meta name="uhfHeaderId" content="azure" />
+
+			<meta name="page_type" content="conceptual" />
+
+			<!--page specific meta tags-->
+			
+
+			<!-- custom meta tags -->
+			
+		<meta name="breadcrumb_path" content="../breadcrumb/azure-monitor/toc.json" />
+	
+		<meta name="feedback_help_link_url" content="https://learn.microsoft.com/answers/tags/456/chaos-studio/" />
+	
+		<meta name="feedback_help_link_type" content="get-help-at-qna" />
+	
+		<meta name="feedback_product_url" content="https://feedback.azure.com/d365community/forum/18f8dc01-dc37-ec11-b6e6-000d3a9c7101" />
+	
+		<meta name="feedback_system" content="Standard" />
+	
+		<meta name="permissioned-type" content="public" />
+	
+		<meta name="recommendations" content="true" />
+	
+		<meta name="recommendation_types" content="Training" />
+	
+		<meta name="recommendation_types" content="Certification" />
+	
+		<meta name="ms.suite" content="office" />
+	
+		<meta name="author" content="rsgel" />
+	
+		<meta name="learn_banner_products" content="azure" />
+	
+		<meta name="ms.author" content="nikhilkaul" />
+	
+		<meta name="ms.service" content="azure-chaos-studio" />
+	
+		<meta name="services" content="chaos-studio" />
+	
+		<meta name="ms.topic" content="how-to" />
+	
+		<meta name="ms.date" content="2025-07-06T00:00:00Z" />
+	
+		<meta name="ms.reviewer" content="vikramraju" />
+	
+		<meta name="ms.custom" content="linux-related-content" />
+	
+		<meta name="document_id" content="be704a5d-46bf-1191-bbd3-803dbd5f264c" />
+	
+		<meta name="document_version_independent_id" content="a09f9f01-35e5-81d8-2e74-4651b533d33c" />
+	
+		<meta name="updated_at" content="2025-06-22T11:23:00Z" />
+	
+		<meta name="original_content_git_url" content="https://github.com/MicrosoftDocs/azure-monitor-docs-pr/blob/live/articles/chaos-studio/chaos-studio-fault-library.md" />
+	
+		<meta name="gitcommit" content="https://github.com/MicrosoftDocs/azure-monitor-docs-pr/blob/7ae60241abc892c1d026bcf3991ac2f09d8b4b8d/articles/chaos-studio/chaos-studio-fault-library.md" />
+	
+		<meta name="git_commit_id" content="7ae60241abc892c1d026bcf3991ac2f09d8b4b8d" />
+	
+		<meta name="site_name" content="Docs" />
+	
+		<meta name="depot_name" content="Learn.azure-monitor" />
+	
+		<meta name="schema" content="Conceptual" />
+	
+		<meta name="toc_rel" content="toc.json" />
+	
+		<meta name="word_count" content="10078" />
+	
+		<meta name="asset_id" content="chaos-studio/chaos-studio-fault-library" />
+	
+		<meta name="moniker_range_name" content="" />
+	
+		<meta name="item_type" content="Content" />
+	
+		<meta name="source_path" content="articles/chaos-studio/chaos-studio-fault-library.md" />
+	
+		<meta name="previous_tlsh_hash" content="D132B353E90DC715EB939E155AA7F75161F4C0CE6BB4A988142D3A52D18C3E266B0899F7DB137394E339865201E39E0E61C0A73DC4AD6323E8B855FD4168324BEBCC3BBB97" />
+	
+		<meta name="github_feedback_content_git_url" content="https://github.com/MicrosoftDocs/azure-monitor-docs/blob/main/articles/chaos-studio/chaos-studio-fault-library.md" />
+	
+		<meta name="markdown_url" content="https://learn.microsoft.com/en-us/azure/chaos-studio/chaos-studio-fault-library?accept=text/markdown" />
+	 
+		<meta name="cmProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/bcbcbad5-4208-4783-8035-8481272c98b8" data-source="generated" />
+	
+		<meta name="cmProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/96f6b0a2-2fd7-4de1-936d-89ad6e0eb7cc" data-source="generated" />
+	
+		<meta name="cmProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/d44a5346-5de4-439c-b804-7b2a536cbb55" data-source="generated" />
+	
+		<meta name="spProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/43b2e5aa-8a6d-4de2-a252-692232e5edc8" data-source="generated" />
+	
+		<meta name="spProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/ef8b0a5a-ba0a-4ec0-8636-48246ccd954f" data-source="generated" />
+	
+		<meta name="spProducts" content="https://authoring-docs-microsoft.poolparty.biz/devrel/da41a22b-b7a0-42d3-9c35-50da1c2b7b87" data-source="generated" />
+	
+
+			<!-- assets and js globals -->
+			
+			<link rel="stylesheet" href="/static/assets/0.4.03413.7809-3b89a05c/styles/site.css" />
+			
+			<script src="https://wcpstatic.microsoft.com/mscc/lib/v2/wcp-consent.js"></script>
+			<script src="https://js.monitor.azure.com/scripts/c/ms.jsll-4.min.js"></script>
+			<script src="/_themes/docs.theme/master/en-us/_themes/global/deprecation.js"></script>
+
+			<!-- msdocs global object -->
+			<script id="msdocs-script">
+		var msDocs = {
+  "environment": {
+    "accessLevel": "online",
+    "azurePortalHostname": "portal.azure.com",
+    "reviewFeatures": false,
+    "supportLevel": "production",
+    "systemContent": true,
+    "siteName": "learn",
+    "legacyHosting": false
+  },
+  "data": {
+    "contentLocale": "en-us",
+    "contentDir": "ltr",
+    "userLocale": "en-us",
+    "userDir": "ltr",
+    "pageTemplate": "Conceptual",
+    "brand": "azure",
+    "context": {},
+    "standardFeedback": true,
+    "showFeedbackReport": false,
+    "feedbackHelpLinkType": "get-help-at-qna",
+    "feedbackHelpLinkUrl": "https://learn.microsoft.com/answers/tags/456/chaos-studio/",
+    "feedbackSystem": "Standard",
+    "feedbackGitHubRepo": "MicrosoftDocs/azure-docs",
+    "feedbackProductUrl": "https://feedback.azure.com/d365community/forum/18f8dc01-dc37-ec11-b6e6-000d3a9c7101",
+    "extendBreadcrumb": false,
+    "isEditDisplayable": true,
+    "isPrivateUnauthorized": false,
+    "hideViewSource": false,
+    "isPermissioned": false,
+    "hasRecommendations": true,
+    "contributors": [
+      {
+        "name": "rsgel",
+        "url": "https://github.com/rsgel"
+      },
+      {
+        "name": "nikhilkaul-msft",
+        "url": "https://github.com/nikhilkaul-msft"
+      },
+      {
+        "name": "kainawroth",
+        "url": "https://github.com/kainawroth"
+      },
+      {
+        "name": "kenwith",
+        "url": "https://github.com/kenwith"
+      },
+      {
+        "name": "prmerger-automator[bot]",
+        "url": "https://github.com/prmerger-automator[bot]"
+      },
+      {
+        "name": "austinmccollum",
+        "url": "https://github.com/austinmccollum"
+      },
+      {
+        "name": "learn-build-service-prod[bot]",
+        "url": "https://github.com/learn-build-service-prod[bot]"
+      },
+      {
+        "name": "PesalaPavan",
+        "url": "https://github.com/PesalaPavan"
+      },
+      {
+        "name": "dbradish-microsoft",
+        "url": "https://github.com/dbradish-microsoft"
+      },
+      {
+        "name": "prasha-microsoft",
+        "url": "https://github.com/prasha-microsoft"
+      },
+      {
+        "name": "KennedyDenMSFT",
+        "url": "https://github.com/KennedyDenMSFT"
+      },
+      {
+        "name": "vikramrajumsft",
+        "url": "https://github.com/vikramrajumsft"
+      },
+      {
+        "name": "rboucher",
+        "url": "https://github.com/rboucher"
+      },
+      {
+        "name": "Stacyrch140",
+        "url": "https://github.com/Stacyrch140"
+      },
+      {
+        "name": "themar-msft",
+        "url": "https://github.com/themar-msft"
+      },
+      {
+        "name": "huypub",
+        "url": "https://github.com/huypub"
+      },
+      {
+        "name": "johnkemnetz",
+        "url": "https://github.com/johnkemnetz"
+      }
+    ]
+  },
+  "functions": {}
+};;
+	</script>
+
+			<!-- base scripts, msdocs global should be before this -->
+			<script src="/static/assets/0.4.03413.7809-3b89a05c/scripts/en-us/index-docs.js"></script>
+			
+
+			<!-- json-ld -->
+			
+		</head>
+	
+			<body
+				id="body"
+				data-bi-name="body"
+				class="layout-body "
+				lang="en-us"
+				dir="ltr"
+			>
+				<header class="layout-body-header background-color-body-medium">
+		<div class="header-holder has-default-focus">
+			
+		<a
+			href="#main"
+			
+			style="z-index: 1070"
+			class="outline-color-text visually-hidden-until-focused position-fixed inner-focus focus-visible top-0 left-0 right-0 padding-xs text-align-center background-color-body"
+			
+		>
+			Skip to main content
+		</a>
+	
+		<a
+			href="#"
+			data-skip-to-ask-learn
+			style="z-index: 1070"
+			class="outline-color-text visually-hidden-until-focused position-fixed inner-focus focus-visible top-0 left-0 right-0 padding-xs text-align-center background-color-body"
+			hidden
+		>
+			Skip to Ask Learn chat experience
+		</a>
+	
+
+			<div hidden id="cookie-consent-holder" data-test-id="cookie-consent-container"></div>
+			<!-- Unsupported browser warning -->
+			<div
+				id="unsupported-browser"
+				style="background-color: white; color: black; padding: 16px; border-bottom: 1px solid grey;"
+				hidden
+			>
+				<div style="max-width: 800px; margin: 0 auto;">
+					<p style="font-size: 24px">This browser is no longer supported.</p>
+					<p style="font-size: 16px; margin-top: 16px;">
+						Upgrade to Microsoft Edge to take advantage of the latest features, security updates, and technical support.
+					</p>
+					<div style="margin-top: 12px;">
+						<a
+							href="https://go.microsoft.com/fwlink/p/?LinkID=2092881 "
+							style="background-color: #0078d4; border: 1px solid #0078d4; color: white; padding: 6px 12px; border-radius: 2px; display: inline-block;"
+						>
+							Download Microsoft Edge
+						</a>
+						<a
+							href="https://learn.microsoft.com/en-us/lifecycle/faq/internet-explorer-microsoft-edge"
+							style="background-color: white; padding: 6px 12px; border: 1px solid #505050; color: #171717; border-radius: 2px; display: inline-block;"
+						>
+							More info about Internet Explorer and Microsoft Edge
+						</a>
+					</div>
+				</div>
+			</div>
+			<!-- site header -->
+			<div
+				id="ms--site-header"
+				data-test-id="site-header-wrapper"
+				itemscope="itemscope"
+				itemtype="http://schema.org/Organization"
+			>
+				<div
+					id="ms--mobile-nav"
+					class="site-header display-none-tablet padding-inline-none gap-none"
+					data-bi-name="mobile-header"
+					data-test-id="mobile-header"
+				></div>
+				<div
+					id="ms--primary-nav"
+					class="site-header display-none display-flex-tablet"
+					data-bi-name="L1-header"
+					data-test-id="primary-header"
+				></div>
+				<div
+					id="ms--secondary-nav"
+					class="site-header display-none display-flex-tablet"
+					data-bi-name="L2-header"
+					data-test-id="secondary-header"
+					
+				></div>
+			</div>
+			
+		<!-- banner -->
+		<div data-banner>
+			<div id="disclaimer-holder"></div>
+			
+		</div>
+		<!-- banner end -->
+	
+		</div>
+	</header>
+				 <section
+					id="layout-body-menu"
+					class="layout-body-menu border-right display-flex background-color-body-medium"
+					data-bi-name="menu"
+			  >
+					
+		<div
+			id="left-container"
+			class="left-container display-none padding-none display-block-tablet width-full"
+			data-toc-container="true"
+		>
+			<div
+				id="ms--toc-content"
+				class="padding-left-sm padding-right-none padding-bottom-sm height-full"
+			>
+				<nav
+					id="affixed-left-container"
+					class="margin-top-xxs-tablet position-sticky display-flex flex-direction-column width-full"
+					aria-label="Primary"
+					data-bi-name="left-toc"
+					role="navigation"
+				>
+					<div
+						id="ms--collapsible-toc-header"
+						class="display-flex flex-direction-row-reverse justify-content-center align-items-center margin-bottom-xxs margin-right-xxs"
+					>
+						<button
+							type="button"
+							class="button button-clear inner-focus"
+							data-collapsible-toc-toggle
+							aria-expanded="true"
+							aria-controls="ms--toc-content"
+							aria-label="Table of contents"
+						>
+							<span class="icon icon-mirrored-rtl font-size-md" aria-hidden="true">
+								<span class="docon docon-panel-left-contract"></span>
+							</span>
+						</button>
+						<div id="ms--collapsible-toc-moniker-slot" class="flex-grow-1"></div>
+					</div>
+				</nav>
+			</div>
+		</div>
+	
+			  </section>
+
+				<main
+					id="main"
+					role="main"
+					class="layout-body-main "
+					data-bi-name="content"
+					lang="en-us"
+					dir="ltr"
+				>
+					
+			<div
+		id="ms--content-header"
+		class="content-header default-focus border-bottom-none"
+		data-bi-name="content-header"
+	>
+		<div class="content-header-controls margin-xxs margin-inline-sm-tablet">
+			<button
+				type="button"
+				class="contents-button button button-sm margin-right-xxs"
+				data-bi-name="contents-expand"
+				aria-haspopup="true"
+				data-contents-button
+			>
+				<span class="icon" aria-hidden="true"><span class="docon docon-menu"></span></span>
+				<span class="contents-expand-title"> Table of contents </span>
+			</button>
+			<button
+				type="button"
+				class="ap-collapse-behavior ap-expanded button button-sm"
+				data-bi-name="ap-collapse"
+				aria-controls="action-panel"
+			>
+				<span class="icon" aria-hidden="true"><span class="docon docon-exit-mode"></span></span>
+				<span>Exit editor mode</span>
+			</button>
+		</div>
+	</div>
+			<div
+				data-main-column
+				class="reading-width margin-inline-auto layout-padding padding-top-none padding-top-sm-tablet padding-bottom-sm"
+			>
+				<div>
+					
+		<div id="article-header" class="background-color-body margin-bottom-xs display-none-print">
+			<div class="display-flex align-items-center justify-content-space-between">
+				
+		<details
+			id="article-header-breadcrumbs-overflow-popover"
+			class="popover popover-left"
+			data-for="article-header-breadcrumbs"
+		>
+			<summary
+				class="button button-clear button-primary button-sm inner-focus"
+				aria-label="All breadcrumbs"
+			>
+				<span class="icon" aria-hidden="true">
+					<span class="docon docon-more"></span>
+				</span>
+			</summary>
+			<div id="article-header-breadcrumbs-overflow" class="popover-content"></div>
+		</details>
+
+		<bread-crumbs
+			id="article-header-breadcrumbs"
+			role="group"
+			aria-label="Breadcrumbs"
+			data-test-id="article-header-breadcrumbs"
+			class="overflow-hidden flex-grow-1 margin-right-sm margin-right-md-tablet margin-right-lg-desktop margin-left-negative-xxs padding-left-xxs"
+		></bread-crumbs>
+	 
+		<div
+			id="article-header-page-actions"
+			class="opacity-none margin-left-auto display-flex flex-wrap-no-wrap align-items-stretch"
+		>
+			
+		<button
+			class="button button-sm border-none inner-focus display-none-tablet flex-shrink-0 "
+			data-bi-name="ask-learn-assistant-entry"
+			data-test-id="ask-learn-assistant-modal-entry-mobile"
+			data-ask-learn-modal-entry
+			
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-label="Ask Learn"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+		</button>
+		<button
+			class="button button-sm display-none display-inline-flex-tablet display-none-desktop flex-shrink-0 margin-right-xxs border-color-ask-learn "
+			data-bi-name="ask-learn-assistant-entry"
+			
+			data-test-id="ask-learn-assistant-modal-entry-tablet"
+			data-ask-learn-modal-entry
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+		<button
+			class="button button-sm display-none flex-shrink-0 display-inline-flex-desktop margin-right-xxs border-color-ask-learn "
+			data-bi-name="ask-learn-assistant-entry"
+			
+			data-test-id="ask-learn-assistant-flyout-entry"
+			data-ask-learn-flyout-entry
+			data-flyout-button="toggle"
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-controls="ask-learn-flyout"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+	 
+
+			<details class="popover popover-right" id="article-header-page-actions-overflow">
+				<summary
+					class="justify-content-flex-start button button-clear button-sm button-primary inner-focus"
+					aria-label="More actions"
+					title="More actions"
+				>
+					<span class="icon" aria-hidden="true">
+						<span class="docon docon-more-vertical"></span>
+					</span>
+				</summary>
+				<div class="popover-content">
+					
+		<button
+			type="button"
+			id="ms--focus-mode-button"
+			data-focus-mode
+			data-bi-name="focus-mode-entry"
+			data-page-action-item="overflow-all"
+			data-popover-close
+			class="button button-clear button-sm button-block justify-content-flex-start text-align-left inner-focus display-none display-inline-flex-tablet"
+		>
+			<span class="icon" aria-hidden="true">
+				<span class="docon docon-glasses"></span>
+			</span>
+			<span>Reading mode</span>
+		</button>
+	 
+		<button
+			data-page-action-item="overflow-mobile"
+			type="button"
+			class="button-block button-sm inner-focus button button-clear display-none-tablet justify-content-flex-start text-align-left"
+			data-bi-name="contents-expand"
+			data-contents-button
+			data-popover-close
+		>
+			<span class="icon" aria-hidden="true"
+				><span class="docon docon-editor-list-bullet"></span
+			></span>
+			<span class="contents-expand-title">Table of contents</span>
+		</button>
+	 
+		<a
+			id="lang-link-overflow"
+			class="button-sm inner-focus button button-clear button-block justify-content-flex-start text-align-left"
+			data-bi-name="language-toggle"
+			data-page-action-item="overflow-all"
+			data-check-hidden="true"
+			data-read-in-link
+			href="#"
+			hidden
+		>
+			<span class="icon" aria-hidden="true" data-read-in-link-icon>
+				<span class="docon docon-locale-globe"></span>
+			</span>
+			<span data-read-in-link-text>Read in English</span>
+		</a>
+	
+					
+		<button
+			type="button"
+			class="collection button button-clear button-sm button-block justify-content-flex-start text-align-left inner-focus"
+			data-list-type="collection"
+			data-bi-name="collection"
+			data-page-action-item="overflow-all"
+			data-check-hidden="true"
+			data-popover-close
+		>
+			<span class="icon" aria-hidden="true">
+				<span class="docon docon-circle-addition"></span>
+			</span>
+			<span class="collection-status">Add</span>
+		</button>
+	 
+		<button
+			type="button"
+			class="collection button button-block button-clear button-sm justify-content-flex-start text-align-left inner-focus"
+			data-list-type="plan"
+			data-bi-name="plan"
+			data-page-action-item="overflow-all"
+			data-check-hidden="true"
+			data-popover-close
+			hidden
+		>
+			<span class="icon" aria-hidden="true">
+				<span class="docon docon-circle-addition"></span>
+			</span>
+			<span class="plan-status">Add to plan</span>
+		</button>
+	 
+					
+		<a
+			data-contenteditbtn
+			class="button button-clear button-block button-sm inner-focus justify-content-flex-start text-align-left text-decoration-none"
+			data-bi-name="edit"
+			data-page-action-item="overflow-all"
+			data-check-hidden="true"
+			
+			href="https://github.com/MicrosoftDocs/azure-monitor-docs/blob/main/articles/chaos-studio/chaos-studio-fault-library.md"
+			data-original_content_git_url="https://github.com/MicrosoftDocs/azure-monitor-docs-pr/blob/live/articles/chaos-studio/chaos-studio-fault-library.md"
+			data-original_content_git_url_template="{repo}/blob/{branch}/articles/chaos-studio/chaos-studio-fault-library.md"
+			data-pr_repo=""
+			data-pr_branch=""
+		>
+			<span class="icon" aria-hidden="true">
+				<span class="docon docon-edit-outline"></span>
+			</span>
+			<span>Edit</span>
+		</a>
+	  
+		<hr class="margin-block-xxs" />
+		
+				<button
+					class="button button-block button-clear button-sm justify-content-flex-start text-align-left inner-focus"
+					type="button"
+					data-bi-name="copy-markdown"
+					data-page-action-item="overflow-all"
+					data-copy-markdown
+					data-copy-state="idle"
+					data-check-hidden="true"
+				>
+					<span class="icon color-primary" aria-hidden="true">
+						<span data-show-when="idle" class="docon docon-code-lang"></span>
+						<span data-show-when="loading" class="loader" hidden></span>
+						<span data-show-when="success" class="docon docon-check-mark" hidden></span>
+					</span>
+					<span>Copy Markdown</span>
+				</button>
+		   
+				<button
+					class="button button-block button-clear button-sm justify-content-flex-start text-align-left inner-focus"
+					type="button"
+					data-bi-name="print"
+					data-page-action-item="overflow-all"
+					data-popover-close
+					data-print-page
+					data-check-hidden="true"
+				>
+					<span class="icon color-primary" aria-hidden="true">
+						<span class="docon docon-print"></span>
+					</span>
+					<span>Print</span>
+				</button>
+		  
+	
+				</div>
+			</details>
+		</div>
+	
+			</div>
+		</div>
+	  
+		<!-- privateUnauthorizedTemplate is hidden by default -->
+		<div unauthorized-private-section data-bi-name="permission-content-unauthorized-private" hidden>
+			<hr class="hr margin-top-xs margin-bottom-sm" />
+			<div class="notification notification-info">
+				<div class="notification-content">
+					<p class="margin-top-none notification-title">
+						<span class="icon" aria-hidden="true"
+							><span class="docon docon-exclamation-circle-solid"></span
+						></span>
+						<span>Note</span>
+					</p>
+					<p class="margin-top-none authentication-determined not-authenticated">
+						Access to this page requires authorization. You can try <a class="docs-sign-in" href="#" data-bi-name="permission-content-sign-in">signing in</a> or <a  class="docs-change-directory" data-bi-name="permisson-content-change-directory">changing directories</a>.
+					</p>
+					<p class="margin-top-none authentication-determined authenticated">
+						Access to this page requires authorization. You can try <a class="docs-change-directory" data-bi-name="permisson-content-change-directory">changing directories</a>.
+					</p>
+				</div>
+			</div>
+		</div>
+	
+					<div class="content"><h1 id="azure-chaos-studio-fault-and-action-library">Azure Chaos Studio fault and action library</h1></div>
+					
+		<div
+			id="article-metadata"
+			data-bi-name="article-metadata"
+			data-test-id="article-metadata"
+			class="page-metadata-container display-flex gap-xxs justify-content-space-between align-items-center flex-wrap-wrap"
+		>
+			 
+				<div
+					id="user-feedback"
+					class="margin-block-xxs display-none display-none-print"
+					hidden
+					data-hide-on-archived
+				>
+					
+		<button
+			id="user-feedback-button"
+			data-test-id="conceptual-feedback-button"
+			class="button button-sm button-clear button-primary display-none"
+			type="button"
+			data-bi-name="user-feedback-button"
+			data-user-feedback-button
+			hidden
+		>
+			<span class="icon" aria-hidden="true">
+				<span class="docon docon-like"></span>
+			</span>
+			<span>Feedback</span>
+		</button>
+	
+				</div>
+		  
+		</div>
+	 
+		<div data-id="ai-summary" class="display-none-print">
+			<div id="ms--ai-summary-cta" class="margin-top-xs display-flex align-items-center">
+				<span class="icon" aria-hidden="true">
+					<span class="docon docon-sparkle-fill gradient-text-vivid"></span>
+				</span>
+				<button
+					id="ms--ai-summary"
+					type="button"
+					class="tag tag-sm tag-suggestion margin-left-xxs"
+					data-test-id="ai-summary-cta"
+					data-bi-name="ai-summary-cta"
+					data-an="ai-summary"
+				>
+					<span class="ai-summary-cta-text">
+						Summarize this article for me
+					</span>
+				</button>
+			</div>
+			<!-- Slot where the client will render the summary card after the user clicks the CTA -->
+			<div id="ms--ai-summary-header" class="margin-top-xs"></div>
+		</div>
+	 
+		<nav
+			id="center-doc-outline"
+			class="doc-outline display-none-desktop display-none-print margin-bottom-sm"
+			data-bi-name="intopic toc"
+			aria-label="In this article"
+		>
+			<h2 id="ms--in-this-article" class="title is-6 margin-block-xs">
+				In this article
+			</h2>
+		</nav>
+	
+					<div class="content"><p>This article lists the faults you can use in Chaos Studio, organized by the applicable resource type. To understand which role assignments are recommended for each resource type, see <a href="chaos-studio-fault-providers" data-linktype="relative-path">Supported resource types and role assignments for Azure Chaos Studio</a>.</p>
+<h2 id="agent-based-faults">Agent-based faults</h2>
+<p>Agent-based faults are injected into <strong>Azure Virtual Machines</strong> or <strong>Virtual Machine Scale Set</strong> instances by installing the Chaos Studio Agent. Find the service-direct fault options for these resources below in the <a href="#virtual-machines-service-direct" data-linktype="self-bookmark">Virtual Machine</a> and <a href="#virtual-machine-scale-set" data-linktype="self-bookmark">Virtual Machine Scale Set</a> tables.</p>
+<table>
+<thead>
+<tr>
+<th>Applicable OS types</th>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows, Linux</td>
+<td><a href="#cpu-pressure" data-linktype="self-bookmark">CPU Pressure</a></td>
+<td>Compute capacity loss, resource pressure</td>
+</tr>
+<tr>
+<td>Windows, Linux</td>
+<td><a href="#kill-process" data-linktype="self-bookmark">Kill Process</a></td>
+<td>Dependency disruption</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#pause-process" data-linktype="self-bookmark">Pause Process</a></td>
+<td>Dependency disruption, service disruption</td>
+</tr>
+<tr>
+<td>Windows<sup>1</sup>, Linux<sup>2</sup></td>
+<td><a href="#network-disconnect" data-linktype="self-bookmark">Network Disconnect</a></td>
+<td>Network disruption</td>
+</tr>
+<tr>
+<td>Windows<sup>1</sup>, Linux<sup>2</sup></td>
+<td><a href="#network-latency" data-linktype="self-bookmark">Network Latency</a></td>
+<td>Network performance degradation</td>
+</tr>
+<tr>
+<td>Windows<sup>1</sup>, Linux<sup>2</sup></td>
+<td><a href="#network-packet-loss" data-linktype="self-bookmark">Network Packet Loss</a></td>
+<td>Network reliability issues</td>
+</tr>
+<tr>
+<td>Windows, Linux<sup>2</sup></td>
+<td><a href="#network-isolation" data-linktype="self-bookmark">Network Isolation</a></td>
+<td>Network disruption</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#dns-failure" data-linktype="self-bookmark">DNS Failure</a></td>
+<td>DNS resolution issues</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#network-disconnect-via-firewall" data-linktype="self-bookmark">Network Disconnect (Via Firewall)</a></td>
+<td>Network disruption</td>
+</tr>
+<tr>
+<td>Windows, Linux</td>
+<td><a href="#physical-memory-pressure" data-linktype="self-bookmark">Physical Memory Pressure</a></td>
+<td>Memory capacity loss, resource pressure</td>
+</tr>
+<tr>
+<td>Windows, Linux</td>
+<td><a href="#stop-service" data-linktype="self-bookmark">Stop Service</a></td>
+<td>Service disruption/restart</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#time-change" data-linktype="self-bookmark">Time Change</a></td>
+<td>Time synchronization issues</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#virtual-memory-pressure" data-linktype="self-bookmark">Virtual Memory Pressure</a></td>
+<td>Memory capacity loss, resource pressure</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><a href="#arbitrary-stress-ng-stressor" data-linktype="self-bookmark">Arbitrary Stress-ng Stressor</a></td>
+<td>General system stress testing</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><a href="#linux-disk-io-pressure" data-linktype="self-bookmark">Linux DiskIO Pressure</a></td>
+<td>Disk I/O performance degradation</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><a href="#disk-io-pressure" data-linktype="self-bookmark">DiskIO Pressure</a></td>
+<td>Disk I/O performance degradation</td>
+</tr>
+</tbody>
+</table>
+<p><sup>1</sup> TCP/UDP packets only. <sup>2</sup> Outbound network traffic only.</p>
+<h2 id="app-service">App Service</h2>
+<p>This section applies to the <code>Microsoft.Web/sites</code> resource type. <a href="/en-us/azure/app-service/overview" data-linktype="absolute-path">Learn more about App Service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#stop-app-service" data-linktype="self-bookmark">Stop App Service</a></td>
+<td>Service disruption</td>
+</tr>
+</tbody>
+</table>
+<h2 id="autoscale-settings">Autoscale Settings</h2>
+<p>This section applies to the <code>Microsoft.Insights/autoscaleSettings</code> resource type. <a href="../azure-monitor/autoscale/autoscale-overview" data-linktype="relative-path">Learn more about Autoscale Settings</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#disable-autoscale" data-linktype="self-bookmark">Disable Autoscale</a></td>
+<td>Compute capacity loss (when used with Virtual Machine Scale Set Shutdown)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="azure-kubernetes-service">Azure Kubernetes Service</h2>
+<p>This section applies to the <code>Microsoft.ContainerService/managedClusters</code> resource type. <a href="/en-us/azure/aks/intro-kubernetes" data-linktype="absolute-path">Learn more about Azure Kubernetes Service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#aks-chaos-mesh-dns-chaos" data-linktype="self-bookmark">AKS Chaos Mesh DNS Chaos</a></td>
+<td>DNS resolution issues</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-http-chaos" data-linktype="self-bookmark">AKS Chaos Mesh HTTP Chaos</a></td>
+<td>Network disruption</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-io-chaos" data-linktype="self-bookmark">AKS Chaos Mesh IO Chaos</a></td>
+<td>Disk degradation/pressure</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-kernel-chaos" data-linktype="self-bookmark">AKS Chaos Mesh Kernel Chaos</a></td>
+<td>Kernel disruption</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-network-chaos" data-linktype="self-bookmark">AKS Chaos Mesh Network Chaos</a></td>
+<td>Network disruption</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-pod-chaos" data-linktype="self-bookmark">AKS Chaos Mesh Pod Chaos</a></td>
+<td>Container disruption</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-stress-chaos" data-linktype="self-bookmark">AKS Chaos Mesh Stress Chaos</a></td>
+<td>System stress testing</td>
+</tr>
+<tr>
+<td><a href="#aks-chaos-mesh-time-chaos" data-linktype="self-bookmark">AKS Chaos Mesh Time Chaos</a></td>
+<td>Time synchronization issues</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cloud-services-classic">Cloud Services (Classic)</h2>
+<p>This section applies to the <code>Microsoft.ClassicCompute/domainNames</code> resource type. <a href="/en-us/azure/cloud-services/cloud-services-choose-me" data-linktype="absolute-path">Learn more about Cloud Services (Classic)</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#cloud-services-classic-shutdown" data-linktype="self-bookmark">Cloud Service Shutdown</a></td>
+<td>Compute loss</td>
+</tr>
+</tbody>
+</table>
+<h2 id="clustered-cache-for-redis">Clustered Cache for Redis</h2>
+<p>This section applies to the <code>Microsoft.Cache/redis</code> resource type. <a href="/en-us/azure/azure-cache-for-redis/cache-overview" data-linktype="absolute-path">Learn more about Clustered Cache for Redis</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#azure-cache-for-redis-reboot" data-linktype="self-bookmark">Azure Cache for Redis (Reboot)</a></td>
+<td>Dependency disruption (caches)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cosmos-db">Cosmos DB</h2>
+<p>This section applies to the <code>Microsoft.DocumentDB/databaseAccounts</code> resource type. <a href="/en-us/azure/cosmos-db/introduction" data-linktype="absolute-path">Learn more about Cosmos DB</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#cosmos-db-failover" data-linktype="self-bookmark">Cosmos DB Failover</a></td>
+<td>Database failover</td>
+</tr>
+</tbody>
+</table>
+<h2 id="event-hubs">Event Hubs</h2>
+<p>This section applies to the <code>Microsoft.EventHub/namespaces</code> resource type. <a href="/en-us/azure/event-hubs/event-hubs-about" data-linktype="absolute-path">Learn more about Event Hubs</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#change-event-hub-state" data-linktype="self-bookmark">Change Event Hub State</a></td>
+<td>Messaging infrastructure misconfiguration/disruption</td>
+</tr>
+</tbody>
+</table>
+<h2 id="key-vault">Key Vault</h2>
+<p>This section applies to the <code>Microsoft.KeyVault/vaults</code> resource type. <a href="/en-us/azure/key-vault/general/basic-concepts" data-linktype="absolute-path">Learn more about Key Vault</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#key-vault-deny-access" data-linktype="self-bookmark">Key Vault: Deny Access</a></td>
+<td>Certificate denial</td>
+</tr>
+<tr>
+<td><a href="#key-vault-disable-certificate" data-linktype="self-bookmark">Key Vault: Disable Certificate</a></td>
+<td>Certificate disruption</td>
+</tr>
+<tr>
+<td><a href="#key-vault-increment-certificate-version" data-linktype="self-bookmark">Key Vault: Increment Certificate Version</a></td>
+<td>Certificate version increment</td>
+</tr>
+<tr>
+<td><a href="#key-vault-update-certificate-policy" data-linktype="self-bookmark">Key Vault: Update Certificate Policy</a></td>
+<td>Certificate policy changes/misconfigurations</td>
+</tr>
+</tbody>
+</table>
+<h2 id="network-security-groups">Network Security Groups</h2>
+<p>This section applies to the <code>Microsoft.Network/networkSecurityGroups</code> resource type. <a href="/en-us/azure/virtual-network/network-security-groups-overview" data-linktype="absolute-path">Learn more about network security groups</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#nsg-security-rule" data-linktype="self-bookmark">NSG Security Rule</a></td>
+<td>Network disruption (for many Azure services)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="service-bus">Service Bus</h2>
+<p>This section applies to the <code>Microsoft.ServiceBus/namespaces</code> resource type. <a href="/en-us/azure/service-bus-messaging/service-bus-messaging-overview" data-linktype="absolute-path">Learn more about Service Bus</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#service-bus-change-queue-state" data-linktype="self-bookmark">Change Queue State</a></td>
+<td>Messaging infrastructure misconfiguration/disruption</td>
+</tr>
+<tr>
+<td><a href="#service-bus-change-subscription-state" data-linktype="self-bookmark">Change Subscription State</a></td>
+<td>Messaging infrastructure misconfiguration/disruption</td>
+</tr>
+<tr>
+<td><a href="#service-bus-change-topic-state" data-linktype="self-bookmark">Change Topic State</a></td>
+<td>Messaging infrastructure misconfiguration/disruption</td>
+</tr>
+</tbody>
+</table>
+<h2 id="virtual-machines-service-direct">Virtual Machines (service-direct)</h2>
+<p>This section applies to the <code>Microsoft.Compute/virtualMachines</code> resource type. <a href="/en-us/azure/virtual-machines/overview" data-linktype="absolute-path">Learn more about Virtual Machines</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#vm-redeploy" data-linktype="self-bookmark">VM Redeploy</a></td>
+<td>Compute disruption, maintenance events</td>
+</tr>
+<tr>
+<td><a href="#virtual-machine-shutdown" data-linktype="self-bookmark">VM Shutdown</a></td>
+<td>Compute loss/disruption</td>
+</tr>
+</tbody>
+</table>
+<h2 id="virtual-machine-scale-set">Virtual Machine Scale Set</h2>
+<p>This section applies to the <code>Microsoft.Compute/virtualMachineScaleSets</code> resource type. <a href="/en-us/azure/virtual-machine-scale-sets/overview" data-linktype="absolute-path">Learn more about Virtual Machine Scale Sets</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Fault name</th>
+<th>Applicable scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#virtual-machine-scale-set-shutdown-version-10" data-linktype="self-bookmark">Virtual Machine Scale Set Shutdown</a></td>
+<td>Compute loss/disruption</td>
+</tr>
+<tr>
+<td><a href="#virtual-machine-scale-set-shutdown-version-20" data-linktype="self-bookmark">Virtual Machine Scale Set Shutdown (2.0)</a></td>
+<td>Compute loss/disruption (by Availability Zone)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="orchestration-actions">Orchestration actions</h2>
+<p>These actions are building blocks for constructing effective experiments. Use them in combination with other faults, such as running a load test while in parallel shutting down compute instances in a zone.</p>
+<table>
+<thead>
+<tr>
+<th>Action category</th>
+<th>Fault name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Load</td>
+<td><a href="#start-load-test-azure-load-testing" data-linktype="self-bookmark">Start load test (Azure Load Testing)</a></td>
+</tr>
+<tr>
+<td>Load</td>
+<td><a href="#stop-load-test-azure-load-testing" data-linktype="self-bookmark">Stop load test (Azure Load Testing)</a></td>
+</tr>
+<tr>
+<td>Time delay</td>
+<td><a href="#delay" data-linktype="self-bookmark">Delay</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="details-agent-based-faults">Details: Agent-based faults</h2>
+<h3 id="network-disconnect">Network Disconnect</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkDisconnect-1.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux (outbound traffic only)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Blocks network traffic for specified port range and network block. At least one destinationFilter or inboundDestinationFilter array must be provided.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Windows:</strong> The agent must run as administrator, which happens by default if installed as a VM extension.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Linux:</strong> The <code>tc</code> (Traffic Control) package is used for network faults. If it isn't already installed, the agent automatically attempts to install it from the default package manager.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:networkDisconnect/1.2</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>destinationFilters</td>
+<td>Delimited JSON array of packet filters defining which outbound packets to target. Maximum of 16.</td>
+</tr>
+<tr>
+<td>inboundDestinationFilters</td>
+<td>Delimited JSON array of packet filters defining which inbound packets to target. Maximum of 16.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>The parameters <strong>destinationFilters</strong> and <strong>inboundDestinationFilters</strong> use the following array of packet filters.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>address</td>
+<td>IP address or hostname (e.g. <code>microsoft.com</code>) to target.</td>
+</tr>
+<tr>
+<td>subnetMask</td>
+<td>(Optional) Subnet mask to affect for the address range. Defaults to <code>255.255.255.255</code> if not provided.</td>
+</tr>
+<tr>
+<td>portLow</td>
+<td>(Optional) Port number of the start of the port range.</td>
+</tr>
+<tr>
+<td>portHigh</td>
+<td>(Optional) Port number of the end of the port range.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>address</code> parameter accepts either the IP address at the start of the IP range, or a hostname (e.g. <code>microsoft.com</code>). If a hostname is provided, the DNS A-record is resolved to a corresponding IP address (or addresses) and a default subnet mask of 255.255.255.255 is applied. The corresponding IP information is only retrieved at the start of the fault, so if the hostname-to-IP mapping changes during the experiment, the fault won't detect the change.</p>
+<h4 id="sample-json">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:networkDisconnect/1.2",
+      "parameters": [
+        {
+          "key": "destinationFilters",
+          "value": "[ { \"address\": \"23.45.229.97\", \"subnetMask\": \"255.255.255.224\", \"portLow\": \"5000\", \"portHigh\": \"5200\" } ]"
+        },
+        {
+          "key": "inboundDestinationFilters",
+          "value": "[ { \"address\": \"23.45.229.97\", \"subnetMask\": \"255.255.255.224\", \"portLow\": \"5000\", \"portHigh\": \"5200\" } ]"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations">Limitations</h4>
+<ul>
+<li>The agent-based network faults currently only support IPv4 addresses.</li>
+<li>The network disconnect fault only affects new connections. Existing active connections continue to persist. You can restart the service or process to force connections to break.</li>
+<li>When running on Windows, the network disconnect fault currently only works with TCP or UDP packets.</li>
+<li>When running on Linux, this fault can only affect <strong>outbound</strong> traffic, not inbound traffic. The fault can affect <strong>both inbound and outbound</strong> traffic on Windows environments (via the <code>inboundDestinationFilters</code> and <code>destinationFilters</code> parameters).</li>
+</ul>
+<h3 id="network-disconnect-via-firewall">Network Disconnect (Via Firewall)</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkDisconnectViaFirewall-1.1</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Applies a Windows Firewall rule to block outbound traffic for specified port range and network block.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>Agent must run as administrator. If the agent is installed as a VM extension, it runs as administrator by default.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:networkDisconnectViaFirewall/1.1</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>destinationFilters</td>
+<td>Delimited JSON array of packet filters that define which outbound packets to target for fault injection.</td>
+</tr>
+<tr>
+<td>address</td>
+<td>IP address that indicates the start of the IP range.</td>
+</tr>
+<tr>
+<td>subnetMask</td>
+<td>Subnet mask for the IP address range.</td>
+</tr>
+<tr>
+<td>portLow</td>
+<td>(Optional) Port number of the start of the port range.</td>
+</tr>
+<tr>
+<td>portHigh</td>
+<td>(Optional) Port number of the end of the port range.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-1">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:networkDisconnectViaFirewall/1.1",
+      "parameters": [
+        {
+          "key": "destinationFilters",
+          "value": "[ { \"Address\": \"23.45.229.97\", \"SubnetMask\": \"255.255.255.224\", \"PortLow\": \"5000\", \"PortHigh\": \"5200\" } ]"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-1">Limitations</h4>
+<ul>
+<li>The agent-based network faults currently only support IPv4 addresses.</li>
+<li>This fault currently only affects new connections. Existing active connections are unaffected. You can restart the service or process to force connections to break.</li>
+<li>This fault only affects <strong>outbound</strong> traffic at this time.</li>
+</ul>
+<h3 id="network-latency">Network Latency</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkLatency-1.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux (outbound traffic only)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Increases network latency for a specified port range and network block. At least one destinationFilter or inboundDestinationFilter array must be provided.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Windows:</strong> The agent must run as administrator, which happens by default if installed as a VM extension.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Linux:</strong> The <code>tc</code> (Traffic Control) package is used for network faults. If it isn't already installed, the agent automatically attempts to install it from the default package manager.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:networkLatency/1.2</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>latencyInMilliseconds</td>
+<td>Amount of latency to be applied in milliseconds.</td>
+</tr>
+<tr>
+<td>destinationFilters</td>
+<td>Delimited JSON array of packet filters defining which outbound packets to target. Maximum of 16.</td>
+</tr>
+<tr>
+<td>inboundDestinationFilters</td>
+<td>Delimited JSON array of packet filters defining which inbound packets to target. Maximum of 16.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>The parameters <strong>destinationFilters</strong> and <strong>inboundDestinationFilters</strong> use the following array of packet filters.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>address</td>
+<td>IP address or hostname (e.g. <code>microsoft.com</code>) to target.</td>
+</tr>
+<tr>
+<td>subnetMask</td>
+<td>(Optional) Subnet mask to affect for the address range. Defaults to <code>255.255.255.255</code> if not provided.</td>
+</tr>
+<tr>
+<td>portLow</td>
+<td>(Optional) Port number of the start of the port range.</td>
+</tr>
+<tr>
+<td>portHigh</td>
+<td>(Optional) Port number of the end of the port range.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>address</code> parameter accepts either the IP address at the start of the IP range, or a hostname (e.g. <code>microsoft.com</code>). If a hostname is provided, the DNS A-record is resolved to a corresponding IP address (or addresses) and a default subnet mask of 255.255.255.255 is applied. The corresponding IP information is only retrieved at the start of the fault, so if the hostname-to-IP mapping changes during the experiment, the fault won't detect the change.</p>
+<h4 id="sample-json-2">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:networkLatency/1.2",
+      "parameters": [
+        {
+          "key": "destinationFilters",
+          "value": "[ { \"address\": \"23.45.229.97\", \"subnetMask\": \"255.255.255.224\", \"portLow\": \"5000\", \"portHigh\": \"5200\" } ]"
+        },
+        {
+          "key": "inboundDestinationFilters",
+          "value": "[ { \"address\": \"23.45.229.97\", \"subnetMask\": \"255.255.255.224\", \"portLow\": \"5000\", \"portHigh\": \"5200\" } ]"
+        },
+        {
+          "key": "latencyInMilliseconds",
+          "value": "100",
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-2">Limitations</h4>
+<ul>
+<li>The agent-based network faults currently only support IPv4 addresses.</li>
+<li>When running on Linux, the network latency fault can only affect <strong>outbound</strong> traffic, not inbound traffic. The fault can affect <strong>both inbound and outbound</strong> traffic on Windows environments (via the <code>inboundDestinationFilters</code> and <code>destinationFilters</code> parameters).</li>
+<li>When running on Windows, the network latency fault currently only works with TCP or UDP packets.</li>
+<li>This fault currently only affects new connections. Existing active connections are unaffected. You can restart the service or process to force connections to break.</li>
+</ul>
+<h3 id="network-packet-loss">Network Packet Loss</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkPacketLoss-1.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux (outbound traffic only)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Introduces packet loss for outbound traffic at a specified rate, between 0.0 (no packets lost) and 1.0 (all packets lost). This action can help simulate scenarios like network congestion or network hardware issues.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Windows:</strong> The agent must run as administrator, which happens by default if installed as a VM extension.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Linux:</strong> The <code>tc</code> (Traffic Control) package is used for network faults. If it isn't already installed, the agent automatically attempts to install it from the default package manager.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:networkPacketLoss/1.2</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>packetLossRate</td>
+<td>The rate at which packets matching the destination filters will be lost, ranging from 0.0 to 1.0.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+<tr>
+<td>destinationFilters</td>
+<td>Delimited JSON array of packet filters (parameters below) that define which outbound packets to target for fault injection. Maximum of three.</td>
+</tr>
+<tr>
+<td>address</td>
+<td>IP address or hostname (e.g. <code>microsoft.com</code>) to target.</td>
+</tr>
+<tr>
+<td>subnetMask</td>
+<td>(Optional) Subnet mask to affect for the address range. Defaults to <code>255.255.255.255</code> if not provided.</td>
+</tr>
+<tr>
+<td>portLow</td>
+<td>(Optional) Port number of the start of the port range.</td>
+</tr>
+<tr>
+<td>portHigh</td>
+<td>(Optional) Port number of the end of the port range.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>address</code> parameter accepts either the IP address at the start of the IP range, or a hostname (e.g. <code>microsoft.com</code>). If a hostname is provided, the DNS A-record is resolved to a corresponding IP address (or addresses) and a default subnet mask of 255.255.255.255 is applied. The corresponding IP information is only retrieved at the start of the fault, so if the hostname-to-IP mapping changes during the experiment, the fault won't detect the change.</p>
+<h4 id="sample-json-3">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:networkPacketLoss/1.2",
+      "parameters": [
+            {
+                "key": "destinationFilters",
+                "value": "[{\"address\":\"23.45.229.97\",\"subnetMask\":\"255.255.255.224\",\"portLow\":5000,\"portHigh\":5200}]"
+            },
+            {
+                "key": "packetLossRate",
+                "value": "0.5"
+            },
+            {
+                "key": "virtualMachineScaleSetInstances",
+                "value": "[0,1,2]"
+            }
+        ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-3">Limitations</h4>
+<ul>
+<li>The agent-based network faults currently only support IPv4 addresses.</li>
+<li>When running on Windows, the network packet loss fault currently only works with TCP or UDP packets.</li>
+<li>When running on Linux, this fault can only affect <strong>outbound</strong> traffic, not inbound traffic. The fault can affect <strong>both inbound and outbound</strong> traffic on Windows environments (via the <code>inboundDestinationFilters</code> and <code>destinationFilters</code> parameters).</li>
+<li>This fault currently only affects new connections. Existing active connections are unaffected. You can restart the service or process to force connections to break.</li>
+</ul>
+<h3 id="network-isolation">Network Isolation</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkIsolation-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux (outbound only)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Fully isolate the virtual machine from network connections by dropping all IP-based inbound (on Windows) and outbound (on Windows and Linux) packets for the specified duration. At the end of the duration, network connections will be re-enabled. Because the agent depends on network traffic, this action cannot be canceled and will run to the specified duration.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Windows:</strong> The agent must run as administrator, which happens by default if installed as a VM extension.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Linux:</strong> The <code>tc</code> (Traffic Control) package is used for network faults. If it isn't already installed, the agent automatically attempts to install it from the default package manager.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:networkIsolation/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode, optional otherwise. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-4">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:networkIsolation/1.0",
+      "parameters": [],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-4">Limitations</h4>
+<ul>
+<li>Because the agent depends on network traffic, <strong>this action cannot be canceled</strong> and will run to the specified duration. Use with caution.</li>
+<li>This fault currently only affects new connections. Existing active connections are unaffected. You can restart the service or process to force connections to break.</li>
+<li>When running on Linux, this fault can only affect <strong>outbound</strong> traffic, not inbound traffic. The fault can affect <strong>both inbound and outbound</strong> traffic on Windows environments.</li>
+</ul>
+<h3 id="dns-failure">DNS Failure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DnsFailure-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Substitutes DNS lookup request responses with a specified error code. DNS lookup requests that are substituted must:<ul><li>Originate from the VM.</li><li>Match the defined fault parameters.</li></ul>DNS lookups that aren't made by the Windows DNS client aren't affected by this fault.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:dnsFailure/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>hosts</td>
+<td>Delimited JSON array of host names to fail DNS lookup request for.<br><br>This property accepts wildcards (<code>*</code>), but only for the first subdomain in an address and only applies to the subdomain for which they're specified. For example:<ul><li>*.microsoft.com is supported.</li><li>subdomain.*.microsoft isn't supported.</li><li>*.microsoft.com doesn't work for multiple subdomains in an address, such as subdomain1.subdomain2.microsoft.com.</li></ul></td>
+</tr>
+<tr>
+<td>dnsFailureReturnCode</td>
+<td>DNS error code to be returned to the client for the lookup failure (FormErr, ServFail, NXDomain, NotImp, Refused, XDomain, YXRRSet, NXRRSet, NotAuth, NotZone). For more information on DNS return codes, see the <a href="https://www.iana.org/assignments/dns-parameters/dns-parameters.xml#dns-parameters-6" data-linktype="external">IANA website</a>.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-5">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:dnsFailure/1.0",
+      "parameters": [
+        {
+          "key": "hosts",
+          "value": "[ \"www.bing.com\", \"msdn.microsoft.com\" ]"
+        },
+        {
+          "key": "dnsFailureReturnCode",
+          "value": "ServFail"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-5">Limitations</h4>
+<ul>
+<li>The DNS Failure fault requires Windows 2019 RS5 or newer.</li>
+<li>DNS Cache is ignored during the duration of the fault for the host names defined in the fault.</li>
+</ul>
+<h3 id="cpu-pressure">CPU Pressure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>CPUPressure-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Adds CPU pressure, up to the specified value, on the VM where this fault is injected during the fault action. The artificial CPU pressure is removed at the end of the duration or if the experiment is canceled. On Windows, the <strong>% Processor Utility</strong> performance counter is used at fault start to determine current CPU percentage, which is subtracted from the <code>pressureLevel</code> defined in the fault so that <strong>% Processor Utility</strong> hits approximately the <code>pressureLevel</code> defined in the fault parameters.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Linux</strong>: The <strong>stress-ng</strong> utility needs to be installed. Installation happens automatically as part of agent installation, using the default package manager, on several operating systems including Debian-based (like Ubuntu), Red Hat Enterprise Linux, and OpenSUSE. For other distributions, including Azure Linux, you must install <strong>stress-ng</strong> manually. For more information, see the <a href="https://github.com/ColinIanKing/stress-ng" data-linktype="external">upstream project repository</a>.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Windows</strong>: None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:cpuPressure/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>pressureLevel</td>
+<td>An integer between 1 and 99 that indicates how much CPU pressure (%) is applied to the VM in terms of <strong>% CPU Usage</strong></td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-6">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:cpuPressure/1.0",
+      "parameters": [
+        {
+          "key": "pressureLevel",
+          "value": "95"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-6">Limitations</h4>
+<p>Known issues on Linux:</p>
+<ul>
+<li>The stress effect might not be terminated correctly if <code>AzureChaosAgent</code> is unexpectedly killed.</li>
+</ul>
+<h3 id="physical-memory-pressure">Physical Memory Pressure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>PhysicalMemoryPressure-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Adds physical memory pressure, up to the specified value, on the VM where this fault is injected during the fault action. The artificial physical memory pressure is removed at the end of the duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Linux</strong>: The <strong>stress-ng</strong> utility needs to be installed. Installation happens automatically as part of agent installation, using the default package manager, on several operating systems including Debian-based (like Ubuntu), Red Hat Enterprise Linux, and OpenSUSE. For other distributions, including Azure Linux, you must install <strong>stress-ng</strong> manually. For more information, see the <a href="https://github.com/ColinIanKing/stress-ng" data-linktype="external">upstream project repository</a>.</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Windows</strong>: None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:physicalMemoryPressure/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>pressureLevel</td>
+<td>An integer between 1 and 99 that indicates how much physical memory pressure (%) is applied to the VM.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-7">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:physicalMemoryPressure/1.0",
+      "parameters": [
+        {
+          "key": "pressureLevel",
+          "value": "95"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-7">Limitations</h4>
+<p>Currently, the Windows agent doesn't reduce memory pressure when other applications increase their memory usage. If the overall memory usage exceeds 100%, the Windows agent might crash.</p>
+<h3 id="virtual-memory-pressure">Virtual Memory Pressure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>VirtualMemoryPressure-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Adds virtual memory pressure, up to the specified value, on the VM where this fault is injected during the fault action. The artificial virtual memory pressure is removed at the end of the duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:virtualMemoryPressure/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>pressureLevel</td>
+<td>An integer between 1 and 99 that indicates how much physical memory pressure (%) is applied to the VM.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-8">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:virtualMemoryPressure/1.0",
+      "parameters": [
+        {
+          "key": "pressureLevel",
+          "value": "95"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="disk-io-pressure">Disk IO Pressure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DiskIOPressure-1.1</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Uses the <a href="https://github.com/Microsoft/diskspd/wiki" data-linktype="external">diskspd utility</a> to add disk pressure to a Virtual Machine. Pressure is added to the primary disk by default, or the disk specified with the targetTempDirectory parameter. This fault has five different modes of execution. The artificial disk pressure is removed at the end of the duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:diskIOPressure/1.1</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>pressureMode</td>
+<td>The preset mode of disk pressure to add to the primary storage of the VM. Must be one of the <code>PressureModes</code> in the following table.</td>
+</tr>
+<tr>
+<td>targetTempDirectory</td>
+<td>(Optional) The directory to use for applying disk pressure. For example, <code>D:/Temp</code>. If the parameter is not included, pressure is added to the primary disk.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="pressure-modes">Pressure modes</h4>
+<table>
+<thead>
+<tr>
+<th>PressureMode</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PremiumStorageP10IOPS</td>
+<td>numberOfThreads = 1<br>randomBlockSizeInKB = 64<br>randomSeed = 10<br>numberOfIOperThread = 25<br>sizeOfBlocksInKB = 8<br>sizeOfWriteBufferInKB = 64<br>fileSizeInGB = 2<br>percentOfWriteActions = 50</td>
+</tr>
+<tr>
+<td>PremiumStorageP10Throttling</td>
+<td><br>numberOfThreads = 2<br>randomBlockSizeInKB = 64<br>randomSeed = 10<br>numberOfIOperThread = 25<br>sizeOfBlocksInKB = 64<br>sizeOfWriteBufferInKB = 64<br>fileSizeInGB = 1<br>percentOfWriteActions = 50</td>
+</tr>
+<tr>
+<td>PremiumStorageP50IOPS</td>
+<td>numberOfThreads = 32<br>randomBlockSizeInKB = 64<br>randomSeed = 10<br>numberOfIOperThread = 32<br>sizeOfBlocksInKB = 8<br>sizeOfWriteBufferInKB = 64<br>fileSizeInGB = 1<br>percentOfWriteActions = 50</td>
+</tr>
+<tr>
+<td>PremiumStorageP50Throttling</td>
+<td>numberOfThreads = 2<br>randomBlockSizeInKB = 1024<br>randomSeed = 10<br>numberOfIOperThread = 2<br>sizeOfBlocksInKB = 1024<br>sizeOfWriteBufferInKB = 1024<br>fileSizeInGB = 20<br>percentOfWriteActions = 50</td>
+</tr>
+<tr>
+<td>Default</td>
+<td>numberOfThreads = 2<br>randomBlockSizeInKB = 64<br>randomSeed = 10<br>numberOfIOperThread = 2<br>sizeOfBlocksInKB = 64<br>sizeOfWriteBufferInKB = 64<br>fileSizeInGB = 1<br>percentOfWriteActions = 50</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-9">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:diskIOPressure/1.1",
+      "parameters": [
+        {
+          "key": "pressureMode",
+          "value": "PremiumStorageP10IOPS"
+        },
+        {
+          "key": "targetTempDirectory",
+          "value": "C:/temp/"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="linux-disk-io-pressure">Linux Disk IO Pressure</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>LinuxDiskIOPressure-1.1</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Uses stress-ng to apply pressure to the disk. One or more worker processes are spawned that perform I/O processes with temporary files. Pressure is added to the primary disk by default, or the disk specified with the targetTempDirectory parameter. For information on how pressure is applied, see the <a href="https://wiki.ubuntu.com/Kernel/Reference/stress-ng" data-linktype="external">stress-ng</a> article.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Linux</strong>: The <strong>stress-ng</strong> utility needs to be installed. Installation happens automatically as part of agent installation, using the default package manager, on several operating systems including Debian-based (like Ubuntu), Red Hat Enterprise Linux, and OpenSUSE. For other distributions, including Azure Linux, you must install <strong>stress-ng</strong> manually. For more information, see the <a href="https://github.com/ColinIanKing/stress-ng" data-linktype="external">upstream project repository</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:linuxDiskIOPressure/1.1</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>workerCount</td>
+<td>Number of worker processes to run. Setting <code>workerCount</code> to 0 generates as many worker processes as there are number of processors.</td>
+</tr>
+<tr>
+<td>fileSizePerWorker</td>
+<td>Size of the temporary file that a worker performs I/O operations against. Integer plus a unit in bytes (b), kilobytes (k), megabytes (m), or gigabytes (g) (for example, <code>4m</code> for 4 megabytes and <code>256g</code> for 256 gigabytes).</td>
+</tr>
+<tr>
+<td>blockSize</td>
+<td>Block size to be used for disk I/O operations, greater than 1 byte and less than 4 megabytes (maximum value is <code>4095k</code>). Integer plus a unit in bytes, kilobytes, or megabytes (for example, <code>512k</code> for 512 kilobytes).</td>
+</tr>
+<tr>
+<td>targetTempDirectory</td>
+<td>(Optional) The directory to use for applying disk pressure. For example, <code>/tmp/</code>. If the parameter is not included, pressure is added to the primary disk.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-10">Sample JSON</h4>
+<p>These sample values produced ~100% disk pressure when tested on a <code>Standard_D2s_v3</code> virtual machine with Premium SSD LRS. A large fileSizePerWorker and smaller blockSize help stress the disk fully.</p>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:linuxDiskIOPressure/1.1",
+      "parameters": [
+        {
+          "key": "workerCount",
+          "value": "4"
+        },
+        {
+          "key": "fileSizePerWorker",
+          "value": "2g"
+        },
+        {
+          "key": "blockSize",
+          "value": "64k"
+        },
+        {
+          "key": "targetTempDirectory",
+          "value": "/tmp/"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="stop-service">Stop Service</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>StopService-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Stops a Windows service or a Linux systemd service during the fault. Restarts it at the end of the duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:stopService/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>serviceName</td>
+<td>Name of the Windows service or Linux systemd service you want to stop.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-11">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:stopService/1.0",
+      "parameters": [
+        {
+          "key": "serviceName",
+          "value": "nvagent"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-8">Limitations</h4>
+<ul>
+<li><strong>Windows</strong>: Display names for services aren't supported. Use <code>sc.exe query</code> in the command prompt to explore service names.</li>
+<li><strong>Linux</strong>: Other service types besides systemd, like sysvinit, aren't supported.</li>
+</ul>
+<h3 id="kill-process">Kill Process</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>KillProcess-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Kills all the <strong>running</strong> instances of a process that matches the process name sent in the fault parameters. Within the duration set for the fault action, a process is killed repetitively based on the value of the kill interval specified. This fault is a destructive fault where system admin would need to manually recover the process if self-healing is configured for it. Note that this fault will error when used on an empty name process, when used with an unspecified interval, or when we cannot find the target process name that we want to kill.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:killProcess/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>processName</td>
+<td>Name of a process to continuously kill (without the .exe). The process does not need to be running when the fault begins executing.</td>
+</tr>
+<tr>
+<td>killIntervalInMilliseconds</td>
+<td>Amount of time the fault waits in between successive kill attempts in milliseconds.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-12">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:killProcess/1.0",
+      "parameters": [
+        {
+          "key": "processName",
+          "value": "myapp"
+        },
+        {
+          "key": "killIntervalInMilliseconds",
+          "value": "1000"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="pause-process">Pause Process</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>PauseProcess-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Pauses (suspends) the specified processes for the specified duration. If there are multiple processes with the same name, this fault suspends all of those processes. Within the fault's duration, the processes are paused repetitively at the specified interval. At the end of the duration or if the experiment is canceled, the processes will resume.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:pauseProcess/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>processNames</td>
+<td>Delimited JSON array of process names defining which processes are to be paused. Maximum of 4. The process name can optionally include the ".exe" extension.</td>
+</tr>
+<tr>
+<td>pauseIntervalInMilliseconds</td>
+<td>Amount of time the fault waits between successive pausing attempts, in milliseconds.</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-13">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:pauseProcess/1.0",
+      "parameters": [
+        {
+          "key": "processNames",
+          "value": "[ \"test-0\", \"test-1.exe\" ]"
+        },
+        {
+          "key": "pauseIntervalInMilliseconds",
+          "value": "1000"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-9">Limitations</h4>
+<p>Currently, a maximum of 4 process names can be listed in the processNames parameter.</p>
+<h3 id="time-change">Time Change</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>TimeChange-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Changes the system time of the virtual machine and resets the time at the end of the experiment or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:timeChange/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>dateTime</td>
+<td>A DateTime string in <a href="https://www.cryptosys.net/pki/manpki/pki_iso8601datetime.html" data-linktype="external">ISO8601 format</a>. If <code>YYYY-MM-DD</code> values are missing, they're defaulted to the current day when the experiment runs. If Thh:mm:ss values are missing, the default value is 12:00:00 AM. If a 2-digit year is provided (<code>YY</code>), it's converted to a 4-digit year (<code>YYYY</code>) based on the current century. If the timezone <code>&lt;Z&gt;</code> is missing, the default offset is the local timezone. <code>&lt;Z&gt;</code> must always include a sign symbol (negative or positive).</td>
+</tr>
+<tr>
+<td>virtualMachineScaleSetInstances</td>
+<td>An array of instance IDs when you apply this fault to a virtual machine scale set. Required for virtual machine scale sets in uniform orchestration mode. <a href="/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-instance-ids#scale-set-instance-id-for-uniform-orchestration-mode" data-linktype="absolute-path">Learn more about instance IDs</a>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-14">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:timeChange/1.0",
+      "parameters": [
+        {
+          "key": "dateTime",
+          "value": "2038-01-01T03:14:07"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="arbitrary-stress-ng-stressor">Arbitrary Stress-ng Stressor</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>StressNg-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-Agent</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Runs any stress-ng command by passing arguments directly to stress-ng. Useful when one of the predefined faults for stress-ng doesn't meet your needs.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td><strong>Linux</strong>: The <strong>stress-ng</strong> utility needs to be installed. Installation happens automatically as part of agent installation, using the default package manager, on several operating systems including Debian-based (like Ubuntu), Red Hat Enterprise Linux, and OpenSUSE. For other distributions, including Azure Linux, you must install <strong>stress-ng</strong> manually. For more information, see the <a href="https://github.com/ColinIanKing/stress-ng" data-linktype="external">upstream project repository</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:agent:stressNg/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>stressNgArguments</td>
+<td>One or more arguments to pass to the stress-ng process. For information on possible stress-ng arguments, see the <a href="https://wiki.ubuntu.com/Kernel/Reference/stress-ng" data-linktype="external">stress-ng</a> article. <strong>NOTE: Do NOT include the "-t " argument because it will cause an error. Experiment length is defined directly in the Azure chaos experiment UI, NOT in the stressNgArguments.</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-15">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:agent:stressNg/1.0",
+      "parameters": [
+        {
+          "key": "stressNgArguments",
+          "value": "--random 64"
+        },
+        {
+          "key": "virtualMachineScaleSetInstances",
+          "value": "[0,1,2]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h2 id="details-service-direct-faults">Details: Service-direct faults</h2>
+<h3 id="stop-app-service">Stop App Service</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Stop-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AppService</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Stops the targeted App Service applications, then restarts them at the end of the fault duration. This action applies to resources of the "Microsoft.Web/sites" type, including App Service, API Apps, Mobile Apps, and Azure Functions.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:appService:stop/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td>None.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-16">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:appService:stop/1.0",
+      "duration": "PT10M",
+      "parameters":[],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="disable-autoscale">Disable Autoscale</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DisableAutoscale-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AutoscaleSettings</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Disables the <a href="/en-us/azure/azure-monitor/autoscale/autoscale-overview" data-linktype="absolute-path">autoscale service</a>. When autoscale is disabled, resources such as virtual machine scale sets, web apps, service bus, and <a href="/en-us/azure/azure-monitor/autoscale/autoscale-overview#supported-services-for-autoscale" data-linktype="absolute-path">more</a> aren't automatically added or removed based on the load of the application.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The autoScalesetting resource that's enabled on the resource must be onboarded to Chaos Studio.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:autoscalesettings:disableAutoscale/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>enableOnComplete</td>
+<td>Boolean. Configures whether autoscaling is reenabled after the action is done. Default is <code>true</code>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-17">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "BranchOne", 
+  "actions": [ 
+    { 
+    "type": "continuous", 
+    "name": "urn:csci:microsoft:autoscaleSetting:disableAutoscale/1.0", 
+    "parameters": [ 
+     { 
+      "key": "enableOnComplete", 
+      "value": "true" 
+      }                 
+  ],                                 
+   "duration": "PT2M", 
+   "selectorId": "Selector1",           
+  } 
+ ] 
+} 
+</code></pre>
+<h4 id="limitations-10">Limitations</h4>
+<blockquote>
+<p><strong>Application Insights custom metrics are not supported</strong></p>
+<p>The <strong>Disable Autoscale</strong> fault currently fails when the target autoscale setting
+contains rules based on <strong>Application Insights custom metrics</strong>.<br>
+Executing the fault requires the ability to read the custom‑metric definition
+in the Application Insights component (<code>Microsoft.Insights/components/*</code> data‑plane
+actions). These permissions are <strong>not</strong> part of the fault’s managed identity
+scope, so the operation is rejected at runtime.</p>
+<p><strong>Work‑around</strong><br>
+Use a standard platform metric (e.g., CPU Percentage) or a Log Analytics
+query‑based custom metric instead of an Application Insights custom metric.
+Alternately, grant the Chaos Studio managed identity the required
+<code>Application Insights Component Contributor</code> role on the Application Insights
+resource and retry the fault.</p>
+</blockquote>
+<h3 id="aks-chaos-mesh-network-chaos">AKS Chaos Mesh Network Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>NetworkChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a network fault available through <a href="https://chaos-mesh.org/docs/simulate-network-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your Azure Kubernetes Service (AKS) cluster. Useful for re-creating AKS incidents that result from network outages, delays, duplications, loss, and corruption.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:networkChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-network-chaos-on-kubernetes/#create-experiments-using-the-yaml-files" data-linktype="external">NetworkChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-18">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:networkChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"action\":\"delay\",\"mode\":\"one\",\"selector\":{\"namespaces\":[\"default\"]},\"delay\":{\"latency\":\"200ms\",\"correlation\":\"100\",\"jitter\":\"0ms\"}}}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-pod-chaos">AKS Chaos Mesh Pod Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>PodChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a pod fault available through <a href="https://chaos-mesh.org/docs/simulate-pod-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating AKS incidents that are a result of pod failures or container issues.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:podChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-pod-chaos-on-kubernetes/#create-experiments-using-yaml-configuration-files" data-linktype="external">PodChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-19">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:podChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"action\":\"pod-failure\",\"mode\":\"all\",\"selector\":{\"namespaces\":[\"default\"]}}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-stress-chaos">AKS Chaos Mesh Stress Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>StressChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a stress fault available through <a href="https://chaos-mesh.org/docs/simulate-heavy-stress-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating AKS incidents because of stresses over a collection of pods, for example, due to high CPU or memory consumption.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:stressChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-heavy-stress-on-kubernetes/#create-experiments-using-the-yaml-file" data-linktype="external">StressChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-20">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:stressChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"mode\":\"one\",\"selector\":{\"namespaces\":[\"default\"]},\"stressors\":{\"cpu\":{\"workers\":1,\"load\":50},\"memory\":{\"workers\":4,\"size\":\"256MB\"}}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-io-chaos">AKS Chaos Mesh IO Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>IOChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes an IO fault available through <a href="https://chaos-mesh.org/docs/simulate-io-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating AKS incidents because of IO delays and read/write failures when you use IO system calls such as <code>open</code>, <code>read</code>, and <code>write</code>.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:IOChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-io-chaos-on-kubernetes/#create-experiments-using-the-yaml-files" data-linktype="external">IOChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-21">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:IOChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"action\":\"latency\",\"mode\":\"one\",\"selector\":{\"app\":\"etcd\"},\"volumePath\":\"\/var\/run\/etcd\",\"path\":\"\/var\/run\/etcd\/**\/*\",\"delay\":\"100ms\",\"percent\":50}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-time-chaos">AKS Chaos Mesh Time Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>TimeChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a change in the system clock on your AKS cluster by using  <a href="https://chaos-mesh.org/docs/simulate-time-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a>. Useful for re-creating AKS incidents that result from distributed systems falling out of sync, missing/incorrect leap year/leap second logic, and more.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:timeChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-time-chaos-on-kubernetes/#create-experiments-using-the-yaml-file" data-linktype="external">TimeChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-22">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:timeChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"mode\":\"one\",\"selector\":{\"namespaces\":[\"default\"]},\"timeOffset\":\"-10m100ns\"}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-kernel-chaos">AKS Chaos Mesh Kernel Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>KernelChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a kernel fault available through <a href="https://chaos-mesh.org/docs/simulate-kernel-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating AKS incidents because of Linux kernel-level errors, such as a mount failing or memory not being allocated.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:kernelChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-kernel-chaos-on-kubernetes/#configuration-file" data-linktype="external">KernelChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-23">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:kernelChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"mode\":\"one\",\"selector\":{\"namespaces\":[\"default\"]},\"failKernRequest\":{\"callchain\":[{\"funcname\":\"__x64_sys_mount\"}],\"failtype\":0}}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-http-chaos">AKS Chaos Mesh HTTP Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>HTTPChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes an HTTP fault available through <a href="https://chaos-mesh.org/docs/simulate-http-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating incidents because of HTTP request and response processing failures, such as delayed or incorrect responses.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:httpChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-http-chaos-on-kubernetes/#create-experiments" data-linktype="external">HTTPChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-24">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:httpChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"mode\":\"all\",\"selector\":{\"namespaces\":[\"default\"]},\"target\":\"Request\",\"port\":80,\"method\":\"GET\",\"path\":\"/api\",\"abort\":true}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="aks-chaos-mesh-dns-chaos">AKS Chaos Mesh DNS Chaos</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DNSChaos-2.2</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureKubernetesServiceChaosMesh</td>
+</tr>
+<tr>
+<td>Supported node pool OS types</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a DNS fault available through <a href="https://chaos-mesh.org/docs/simulate-dns-chaos-on-kubernetes/" data-linktype="external">Chaos Mesh</a> to run against your AKS cluster. Useful for re-creating incidents because of DNS failures.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The AKS cluster must <a href="chaos-studio-tutorial-aks-portal" data-linktype="relative-path">have Chaos Mesh deployed</a> and the <a href="https://chaos-mesh.org/docs/simulate-dns-chaos-on-kubernetes/#deploy-chaos-dns-service" data-linktype="external">DNS service must be installed</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureKubernetesServiceChaosMesh:dnsChaos/2.2</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>jsonSpec</td>
+<td>A JSON-formatted Chaos Mesh spec that uses the <a href="https://chaos-mesh.org/docs/simulate-dns-chaos-on-kubernetes/#create-experiments-using-the-yaml-file" data-linktype="external">DNSChaos kind</a>. You can use a YAML-to-JSON converter like <a href="https://www.convertjson.com/yaml-to-json.htm" data-linktype="external">Convert YAML To JSON</a> to convert the Chaos Mesh YAML to JSON and minify it. Use single-quotes within the JSON or escape the quotes with a backslash character. Only include the YAML under the <code>jsonSpec</code> property. Don't include information like metadata and kind. Specifying duration within the <code>jsonSpec</code> isn't necessary, but it's used if available.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-25">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:azureKubernetesServiceChaosMesh:dnsChaos/2.2",
+      "parameters": [
+        {
+            "key": "jsonSpec",
+            "value": "{\"action\":\"random\",\"mode\":\"all\",\"patterns\":[\"google.com\",\"chaos-mesh.*\",\"github.?om\"],\"selector\":{\"namespaces\":[\"default\"]}}"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="cloud-services-classic-shutdown">Cloud Services (Classic) Shutdown</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Shutdown-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-DomainName</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Stops a deployment during the fault. Restarts the deployment at the end of the fault duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:domainName:shutdown/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters</td>
+<td>None.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-26">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:domainName:shutdown/1.0",
+      "parameters": [],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="azure-cache-for-redis-reboot">Azure Cache for Redis (Reboot)</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Reboot-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureClusteredCacheForRedis</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes a forced reboot operation to occur on the target to simulate a brief outage.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureClusteredCacheForRedis:reboot/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>rebootType</td>
+<td>The node types where the reboot action is to be performed, which can be specified as PrimaryNode, SecondaryNode, or AllNodes.</td>
+</tr>
+<tr>
+<td>shardId</td>
+<td>The ID of the shard to be rebooted. Only relevant for Premium tier caches.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-27">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:azureClusteredCacheForRedis:reboot/1.0",
+      "parameters": [
+        {
+          "key": "RebootType",
+          "value": "AllNodes"
+        },
+        {
+          "key": "ShardId",
+          "value": "0"
+        }
+      ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-11">Limitations</h4>
+<ul>
+<li>The reboot fault causes a forced reboot to better simulate an outage event, which means there's the potential for data loss to occur.</li>
+<li>The reboot fault is a <strong>discrete</strong> fault type. Unlike continuous faults, it's a one-time action and has no duration.</li>
+</ul>
+<h3 id="cosmos-db-failover">Cosmos DB Failover</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Failover-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-CosmosDB</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Causes an Azure Cosmos DB account with a single write region to fail over to a specified read region to simulate a <a href="/en-us/azure/cosmos-db/high-availability" data-linktype="absolute-path">write region outage</a>.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td><code>urn:csci:microsoft:cosmosDB:failover/1.0</code></td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>readRegion</td>
+<td>The read region that should be promoted to write region during the failover, for example, <code>East US 2</code>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-28">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:cosmosDB:failover/1.0",
+      "parameters": [
+        {
+          "key": "readRegion",
+          "value": "West US 2"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="change-event-hub-state">Change Event Hub State</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>ChangeEventHubState-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-EventHub</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Sets individual event hubs to the desired state within an Azure Event Hubs namespace. You can affect specific event hub names or use <code>*</code> to affect all within the namespace. This action can help test your messaging infrastructure for maintenance or failure scenarios. This is a discrete fault, so the entity will not be returned to the starting state automatically.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>An Azure Event Hubs namespace with at least one <a href="/en-us/azure/event-hubs/event-hubs-create" data-linktype="absolute-path">event hub entity</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:eventHub:changeEventHubState/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>desiredState</td>
+<td>The desired state for the targeted event hubs. The possible states are Active, Disabled, and SendDisabled.</td>
+</tr>
+<tr>
+<td>eventHubs</td>
+<td>A comma-separated list of the event hub names within the targeted namespace. Use "*" to affect all entities within the namespace.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-29">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "Branch1",
+    "actions": [
+        {
+            "selectorId": "Selector1",
+            "type": "discrete",
+            "parameters": [
+                {
+                    "key": "eventhubs",
+                    "value": "[\"*\"]"
+                },
+                {
+                    "key": "desiredState",
+                    "value": "Disabled"
+                }
+            ],
+            "name": "urn:csci:microsoft:eventHub:changeEventHubState/1.0"
+        }
+    ]
+}
+</code></pre>
+<h3 id="key-vault-deny-access">Key Vault: Deny Access</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DenyAccess-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-KeyVault</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Blocks all network access to a key vault by temporarily modifying the key vault network rules. This action prevents an application dependent on the key vault from accessing secrets, keys, and/or certificates. If the key vault allows access to all networks, this setting is changed to only allow access from selected networks. No virtual networks are in the allowed list at the start of the fault. All networks are allowed access at the end of the fault duration. If the key vault is set to only allow access from selected networks, any virtual networks in the allowed list are removed at the start of the fault. They're restored at the end of the fault duration.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>The target key vault can't have any firewall rules and must not be set to allow Azure services to bypass the firewall. If the target key vault is set to only allow access from selected networks, there must be at least one virtual network rule. The key vault can't be in recover mode.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:keyVault:denyAccess/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td>None.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-30">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:keyvault:denyAccess/1.0",
+      "parameters": [],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="key-vault-disable-certificate">Key Vault: Disable Certificate</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>DisableCertificate-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-KeyVault</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>By using certificate properties, the fault disables the certificate for a specific duration (provided by the user). It enables the certificate after this fault duration.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:keyvault:disableCertificate/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>certificateName</td>
+<td>Name of Azure Key Vault certificate on which the fault is executed.</td>
+</tr>
+<tr>
+<td>version</td>
+<td>Certificate version that should be disabled. If not specified, the latest version is disabled.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-31">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:keyvault:disableCertificate/1.0",
+      "parameters": [
+        {
+            "key": "certificateName",
+            "value": "&lt;name of AKV certificate&gt;"
+        },
+        {
+            "key": "version",
+            "value": "&lt;certificate version&gt;"
+        }
+
+],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="key-vault-increment-certificate-version">Key Vault: Increment Certificate Version</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>IncrementCertificateVersion-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-KeyVault</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Generates a new certificate version and thumbprint by using the Key Vault Certificate client library. Current working certificate is upgraded to this version. Certificate version is not reverted after the fault duration.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:keyvault:incrementCertificateVersion/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>certificateName</td>
+<td>Name of Azure Key Vault certificate on which the fault is executed.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-32">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:keyvault:incrementCertificateVersion/1.0",
+      "parameters": [
+        {
+            "key": "certificateName",
+            "value": "&lt;name of AKV certificate&gt;"
+        }
+    ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="key-vault-update-certificate-policy">Key Vault: Update Certificate Policy</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>UpdateCertificatePolicy-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-KeyVault</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Certificate policies (for example, certificate validity period, certificate type, key size, or key type) are updated based on user input and reverted after the fault duration.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:keyvault:updateCertificatePolicy/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>certificateName</td>
+<td>Name of Azure Key Vault certificate on which the fault is executed.</td>
+</tr>
+<tr>
+<td>version</td>
+<td>Certificate version that should be updated. If not specified, the latest version is updated.</td>
+</tr>
+<tr>
+<td>enabled</td>
+<td>Boolean. Value that indicates if the new certificate version is enabled.</td>
+</tr>
+<tr>
+<td>validityInMonths</td>
+<td>Validity period of the certificate in months.</td>
+</tr>
+<tr>
+<td>certificateTransparency</td>
+<td>Indicates whether the certificate should be published to the certificate transparency list when created.</td>
+</tr>
+<tr>
+<td>certificateType</td>
+<td>Certificate type.</td>
+</tr>
+<tr>
+<td>contentType</td>
+<td>Content type of the certificate. For example, it's Pkcs12 when the certificate contains raw PFX bytes or Pem when it contains ASCII PEM-encoded bytes. Pkcs12 is the default value assumed.</td>
+</tr>
+<tr>
+<td>keySize</td>
+<td>Size of the RSA key: 2048, 3072, or 4096.</td>
+</tr>
+<tr>
+<td>exportable</td>
+<td>Boolean. Value that indicates if the certificate key is exportable from the vault or secure certificate store.</td>
+</tr>
+<tr>
+<td>reuseKey</td>
+<td>Boolean. Value that indicates if the certificate key should be reused when the certificate is rotated.</td>
+</tr>
+<tr>
+<td>keyType</td>
+<td>Type of backing key generated when new certificates are issued, such as RSA or EC.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-33">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:keyvault:updateCertificatePolicy/1.0",
+      "parameters": [
+        {
+            "key": "certificateName",
+            "value": "&lt;name of AKV certificate&gt;"
+        },
+        {
+            "key": "version",
+            "value": "&lt;certificate version&gt;"
+        },
+        {
+            "key": "enabled",
+            "value": "True"
+        },
+        {
+            "key": "validityInMonths",
+            "value": "12"
+        },
+        {
+            "key": "certificateTransparency",
+            "value": "True"
+        },
+        {
+            "key": "certificateType",
+            "value": "&lt;certificate type&gt;"
+        },
+        {
+            "key": "contentType",
+            "value": "Pem"
+        },
+        {
+            "key": "keySize",
+            "value": "4096"
+        },
+                {
+            "key": "exportable",
+            "value": "True"
+        },
+        {
+            "key": "reuseKey",
+            "value": "False"
+        },
+        {
+            "key": "keyType",
+            "value": "RSA"
+        }
+
+     ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="nsg-security-rule">NSG Security Rule</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>SecurityRule-1.0, SecurityRule-1.1</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-NetworkSecurityGroup</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Enables manipulation or rule creation in an existing Azure network security group (NSG) or set of Azure NSGs, assuming the rule definition is applicable across security groups. Useful for: <ul><li>Simulating an outage of a downstream or cross-region dependency/nondependency.</li><li>Simulating an event that's expected to trigger a logic to force a service failover.</li><li>Simulating an event that's expected to trigger an action from a monitoring or state management service.</li><li>Using as an alternative for blocking or allowing network traffic where Chaos Agent can't be deployed.</li></ul></td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:networkSecurityGroup:securityRule/1.0, urn:csci:microsoft:networkSecurityGroup:securityRule/1.1</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>name</td>
+<td>A unique name for the security rule that's created. The fault fails if another rule already exists on the NSG with the same name. Must begin with a letter or number. Must end with a letter, number, or underscore. May contain only letters, numbers, underscores, periods, or hyphens.</td>
+</tr>
+<tr>
+<td>protocol</td>
+<td>Protocol for the security rule. Must be Any, TCP, UDP, or ICMP.</td>
+</tr>
+<tr>
+<td>sourceAddresses</td>
+<td>A string that represents a JSON-delimited array of CIDR-formatted IP addresses. Can also be a <a href="/en-us/azure/virtual-network/service-tags-overview" data-linktype="absolute-path">service tag name</a> for an inbound rule, for example, <code>AppService</code>. An asterisk <code>*</code> can also be used to match all source IPs.</td>
+</tr>
+<tr>
+<td>destinationAddresses</td>
+<td>A string that represents a JSON-delimited array of CIDR-formatted IP addresses. Can also be a <a href="/en-us/azure/virtual-network/service-tags-overview" data-linktype="absolute-path">service tag name</a> for an outbound rule, for example, <code>AppService</code>. An asterisk <code>*</code> can also be used to match all destination IPs.</td>
+</tr>
+<tr>
+<td>action</td>
+<td>Security group access type. Must be either Allow or Deny.</td>
+</tr>
+<tr>
+<td>destinationPortRanges</td>
+<td>A string that represents a JSON-delimited array of single ports and/or port ranges, such as 80 or 1024-65535.</td>
+</tr>
+<tr>
+<td>sourcePortRanges</td>
+<td>A string that represents a JSON-delimited array of single ports and/or port ranges, such as 80 or 1024-65535.</td>
+</tr>
+<tr>
+<td>priority</td>
+<td>A value between 100 and 4096 that's unique for all security rules within the NSG. The fault fails if another rule already exists on the NSG with the same priority.</td>
+</tr>
+<tr>
+<td>direction</td>
+<td>Direction of the traffic affected by the security rule. Must be either Inbound or Outbound.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-34">Sample JSON</h4>
+<pre><code class="lang-json">{ 
+  "name": "branchOne", 
+  "actions": [ 
+    { 
+      "type": "continuous", 
+      "name": "urn:csci:microsoft:networkSecurityGroup:securityRule/1.0", 
+      "parameters": [ 
+          { 
+              "key": "name", 
+              "value": "Block_SingleHost_to_Networks" 
+
+          }, 
+          { 
+              "key": "protocol", 
+              "value": "Any" 
+          }, 
+          { 
+              "key": "sourceAddresses", 
+              "value": "[\"10.1.1.128/32\"]"
+          }, 
+          { 
+              "key": "destinationAddresses", 
+              "value": "[\"10.20.0.0/16\",\"10.30.0.0/16\"]"
+          }, 
+          { 
+              "key": "access", 
+              "value": "Deny" 
+          }, 
+          { 
+              "key": "destinationPortRanges", 
+              "value": "[\"80-8080\"]"
+          }, 
+          { 
+              "key": "sourcePortRanges", 
+              "value": "[\"*\"]"
+          }, 
+          { 
+              "key": "priority", 
+              "value": "100" 
+          }, 
+          { 
+              "key": "direction", 
+              "value": "Outbound" 
+          } 
+      ], 
+      "duration": "PT10M", 
+      "selectorid": "myResources" 
+    } 
+  ] 
+} 
+</code></pre>
+<h4 id="limitations-12">Limitations</h4>
+<ul>
+<li>The fault can only be applied to an existing NSG.</li>
+<li>When an NSG rule that's intended to deny traffic is applied, existing connections won't be broken until they've been <strong>idle</strong> for 4 minutes. One workaround is to add another branch in the same step that uses a fault that would cause existing connections to break when the NSG fault is applied. For example, killing the process, temporarily stopping the service, or restarting the VM would cause connections to reset.</li>
+<li>Rules are applied at the start of the action. Any external changes to the rule during the duration of the action cause the experiment to fail.</li>
+<li>Creating or modifying Application Security Group rules isn't supported.</li>
+<li>Priority values must be unique on each NSG targeted. Attempting to create a new rule that has the same priority value as another causes the experiment to fail.</li>
+<li>The NSG Security Rule <strong>version 1.1</strong> fault supports an additional <code>flushConnection</code> parameter. This functionality has an <strong>active known issue</strong>: if <code>flushConnection</code> is enabled, the fault may result in a "FlushingNetworkSecurityGroupConnectionIsNotEnabled" error. To avoid this error temporarily, disable the <code>flushConnection</code> parameter or use the NSG Security Rule version <strong>1.0</strong> fault.</li>
+</ul>
+<h3 id="service-bus-change-queue-state">Service Bus: Change Queue State</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>ChangeQueueState-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-ServiceBus</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Sets Queue entities within a Service Bus namespace to the desired state. You can affect specific entity names or use <code>*</code> to affect all. This action can help test your messaging infrastructure for maintenance or failure scenarios. This is a discrete fault, so the entity will not be returned to the starting state automatically.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>A Service Bus namespace with at least one <a href="/en-us/azure/service-bus-messaging/service-bus-quickstart-portal" data-linktype="absolute-path">Queue entity</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:serviceBus:changeQueueState/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>desiredState</td>
+<td>The desired state for the targeted queues. The possible states are Active, Disabled, SendDisabled, and ReceiveDisabled.</td>
+</tr>
+<tr>
+<td>queues</td>
+<td>A comma-separated list of the queue names within the targeted namespace. Use "*" to affect all queues within the namespace.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-35">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:serviceBus:changeQueueState/1.0",
+      "parameters":[
+          {
+            "key": "desiredState",
+            "value": "Disabled"
+          },
+          {
+            "key": "queues",
+            "value": "samplequeue1,samplequeue2"
+          }
+      ],
+      "selectorid": "myServiceBusSelector"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-13">Limitations</h4>
+<ul>
+<li>A maximum of 1000 queue entities can be passed to this fault.</li>
+</ul>
+<h3 id="service-bus-change-subscription-state">Service Bus: Change Subscription State</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>ChangeSubscriptionState-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-ServiceBus</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Sets Subscription entities within a Service Bus namespace and Topic to the desired state. You can affect specific entity names or use <code>*</code> to affect all. This action can help test your messaging infrastructure for maintenance or failure scenarios. This is a discrete fault, so the entity will not be returned to the starting state automatically.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>A Service Bus namespace with at least one <a href="/en-us/azure/service-bus-messaging/service-bus-quickstart-topics-subscriptions-portal" data-linktype="absolute-path">Subscription entity</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:serviceBus:changeSubscriptionState/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>desiredState</td>
+<td>The desired state for the targeted subscriptions. The possible states are Active and Disabled.</td>
+</tr>
+<tr>
+<td>topic</td>
+<td>The parent topic containing one or more subscriptions to affect.</td>
+</tr>
+<tr>
+<td>subscriptions</td>
+<td>A comma-separated list of the subscription names within the targeted namespace. Use "*" to affect all subscriptions within the namespace.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-36">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:serviceBus:changeSubscriptionState/1.0",
+      "parameters":[
+          {
+            "key": "desiredState",
+            "value": "Disabled"
+          },
+          {
+            "key": "topic",
+            "value": "topic01"
+          },
+          {
+            "key": "subscriptions",
+            "value": "*"
+          }
+      ],
+      "selectorid": "myServiceBusSelector"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-14">Limitations</h4>
+<ul>
+<li>A maximum of 1000 subscription entities can be passed to this fault.</li>
+</ul>
+<h3 id="service-bus-change-topic-state">Service Bus: Change Topic State</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>ChangeTopicState-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-ServiceBus</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Sets the specified Topic entities within a Service Bus namespace to the desired state. You can affect specific entity names or use <code>*</code> to affect all. This action can help test your messaging infrastructure for maintenance or failure scenarios. This is a discrete fault, so the entity will not be returned to the starting state automatically.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>A Service Bus namespace with at least one <a href="/en-us/azure/service-bus-messaging/service-bus-quickstart-topics-subscriptions-portal" data-linktype="absolute-path">Topic entity</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:serviceBus:changeTopicState/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>desiredState</td>
+<td>The desired state for the targeted topics. The possible states are Active and Disabled.</td>
+</tr>
+<tr>
+<td>topics</td>
+<td>A comma-separated list of the topic names within the targeted namespace. Use "*" to affect all topics within the namespace.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-37">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:serviceBus:changeTopicState/1.0",
+      "parameters":[
+          {
+            "key": "desiredState",
+            "value": "Disabled"
+          },
+          {
+            "key": "topics",
+            "value": "*"
+          }
+      ],
+      "selectorid": "myServiceBusSelector"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-15">Limitations</h4>
+<ul>
+<li>A maximum of 1000 topic entities can be passed to this fault.</li>
+</ul>
+<h3 id="vm-redeploy">VM Redeploy</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Redeploy-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-VirtualMachine</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Redeploys a VM by shutting it down, moving it to a new node in the Azure infrastructure, and powering it back on. This helps validate your workload's resilience to maintenance events.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:virtualMachine:redeploy/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td>None.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-38">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:virtualMachine:redeploy/1.0",
+      "parameters":[],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-16">Limitations</h4>
+<ul>
+<li>The Virtual Machine Redeploy operation is throttled within an interval of 10 hours. If your experiment fails with a "Too many redeploy requests" error, wait for 10 hours to retry the experiment.</li>
+<li>VM extension errors that occur during the restart operation are ignored. This means if the VM successfully restarts but a VM extension fails to load, the fault will be considered successful. Ignored extension errors include VMExtensionProvisioningError, VMExtensionProvisioningTimeout, VMExtensionManagementInternalError, and VMExtensionHandlerNonTransientError.</li>
+</ul>
+<h3 id="virtual-machine-shutdown">Virtual Machine Shutdown</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Shutdown-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-VirtualMachine</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux.</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Shuts down a VM for the duration of the fault. Restarts it at the end of the experiment or if the experiment is canceled. Only Azure Resource Manager VMs are supported.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:virtualMachine:shutdown/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>abruptShutdown</td>
+<td>(Optional) Boolean that indicates if the VM should be shut down gracefully or abruptly (destructive).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-39">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:virtualMachine:shutdown/1.0",
+      "parameters": [
+        {
+          "key": "abruptShutdown",
+          "value": "false"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h4 id="limitations-17">Limitations</h4>
+<ul>
+<li>VM extension errors that occur during the restart operation are ignored. This means if the VM successfully restarts but a VM extension fails to load, the fault will be considered successful. Ignored extension errors include VMExtensionProvisioningError, VMExtensionProvisioningTimeout, VMExtensionManagementInternalError, and VMExtensionHandlerNonTransientError.</li>
+</ul>
+<h3 id="virtual-machine-scale-set-shutdown">Virtual Machine Scale Set Shutdown</h3>
+<p>This fault has two available versions that you can use, Version 1.0 and Version 2.0. The main difference is that Version 2.0 allows you to filter by availability zones, only shutting down instances within a specified zone or zones.</p>
+<h4 id="virtual-machine-scale-set-shutdown-version-10">Virtual Machine Scale Set Shutdown Version 1.0</h4>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Shutdown-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-VirtualMachineScaleSet</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux.</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Shuts down or kills a virtual machine scale set instance during the fault and restarts the VM at the end of the fault duration or if the experiment is canceled.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:virtualMachineScaleSet:shutdown/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>abruptShutdown</td>
+<td>(Optional) Boolean that indicates if the virtual machine scale set instance should be shut down gracefully or abruptly (destructive).</td>
+</tr>
+<tr>
+<td>instances</td>
+<td>A string that's a delimited array of virtual machine scale set instance IDs to which the fault is applied.</td>
+</tr>
+</tbody>
+</table>
+<h5 id="version-10-sample-json">Version 1.0 sample JSON</h5>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "continuous",
+      "name": "urn:csci:microsoft:virtualMachineScaleSet:shutdown/1.0",
+      "parameters": [
+        {
+          "key": "abruptShutdown",
+          "value": "true"
+        },
+        {
+          "key": "instances",
+          "value": "[\"1\",\"3\"]"
+        }
+      ],
+      "duration": "PT10M",
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h5 id="limitations-18">Limitations</h5>
+<ul>
+<li>VM extension errors that occur during the restart operation are ignored. This means if the VM scale set instances successfully restart but VM extensions fail to load, the fault will be considered successful. Ignored extension errors include VMExtensionProvisioningError, VMExtensionProvisioningTimeout, VMExtensionManagementInternalError, and VMExtensionHandlerNonTransientError.</li>
+</ul>
+<h4 id="virtual-machine-scale-set-shutdown-version-20">Virtual Machine Scale Set Shutdown Version 2.0</h4>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Shutdown-2.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-VirtualMachineScaleSet</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>Windows, Linux.</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Shuts down or kills a virtual machine scale set instance during the fault. Restarts the VM at the end of the fault duration or if the experiment is canceled. Supports <a href="chaos-studio-tutorial-dynamic-target-cli" data-linktype="relative-path">dynamic targeting</a>.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>None.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:virtualMachineScaleSet:shutdown/2.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Continuous.</td>
+</tr>
+<tr>
+<td><a href="/en-us/azure/templates/microsoft.chaos/experiments?pivots=deployment-language-arm-template#filter-objects-1" data-linktype="absolute-path">filter</a></td>
+<td>(Optional) Available starting with Version 2.0. Used to filter the list of targets in a selector. Currently supports filtering on a list of zones. The filter is only applied to virtual machine scale set resources within a zone:<ul><li>If no filter is specified, this fault shuts down all instances in the virtual machine scale set.</li><li>The experiment targets all virtual machine scale set instances in the specified zones.</li><li>If a filter results in no targets, the experiment fails.</li></ul></td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>abruptShutdown</td>
+<td>(Optional) Boolean that indicates if the virtual machine scale set instance should be shut down gracefully or abruptly (destructive).</td>
+</tr>
+</tbody>
+</table>
+<h5 id="version-20-sample-json-snippets">Version 2.0 sample JSON snippets</h5>
+<p>The following snippets show how to configure both <a href="chaos-studio-tutorial-dynamic-target-cli" data-linktype="relative-path">dynamic filtering</a> and the shutdown 2.0 fault.</p>
+<p>Configure a filter for dynamic targeting:</p>
+<pre><code class="lang-json">{
+  "type": "List",
+  "id": "myResources",
+  "targets": [
+    {
+      "id": "&lt;targetResourceId&gt;",
+      "type": "ChaosTarget"
+    }
+  ],
+  "filter": {
+    "type": "Simple",
+    "parameters": {
+      "zones": [
+        "1"
+      ]
+    }
+  }
+}
+</code></pre>
+<p>Configure the shutdown fault:</p>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "name": "urn:csci:microsoft:virtualMachineScaleSet:shutdown/2.0",
+      "type": "continuous",
+      "selectorId": "myResources",
+      "duration": "PT10M",
+      "parameters": [
+        {
+          "key": "abruptShutdown",
+          "value": "false"
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+<h5 id="limitations-19">Limitations</h5>
+<ul>
+<li>Currently, only virtual machine scale sets configured with the <strong>Uniform</strong> orchestration mode are supported. If your virtual machine scale set uses <strong>Flexible</strong> orchestration, you can use the Azure Resource Manager virtual machine shutdown fault to shut down selected instances.</li>
+<li>VM extension errors that occur during the restart operation are ignored. This means if the VM scale set instances successfully restart but VM extensions fail to load, the fault will be considered successful. Ignored extension errors include VMExtensionProvisioningError, VMExtensionProvisioningTimeout, VMExtensionManagementInternalError, and VMExtensionHandlerNonTransientError.</li>
+</ul>
+<div class="IMPORTANT">
+<p>Important</p>
+<p><strong>Limitation:</strong> The Virtual Machine Scale Set Shutdown fault may fail if the target VMSS is in an updating state (such as during scaling or OS updates). Ensure your VMSS is not actively updating when running this fault. This is a known platform limitation.</p>
+</div>
+<h2 id="details-orchestration-actions">Details: Orchestration actions</h2>
+<h3 id="delay">Delay</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault provider</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Supported OS types</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Adds a time delay before, between, or after other experiment actions. This action isn't a fault and is used to synchronize actions within an experiment. Use this action to wait for the impact of a fault to appear in a service, or wait for an activity outside of the experiment to complete. For example, your experiment could wait for autohealing to occur before injecting another fault.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:chaosStudio:timedDelay/1.0</td>
+</tr>
+<tr>
+<td>Duration</td>
+<td>The duration of the delay in ISO 8601 format (for example, PT10M).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-40">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [ 
+    {
+      "type": "delay",
+      "name": "urn:csci:microsoft:chaosStudio:timedDelay/1.0",
+      "duration": "PT10M"
+    }
+  ] 
+}
+</code></pre>
+<h3 id="start-load-test-azure-load-testing">Start Load Test (Azure Load Testing)</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Start-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureLoadTest</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Starts a load test (from Azure Load Testing) based on the provided load test ID.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>A load test with a valid load test ID must be created in the <a href="/en-us/azure/load-testing/quickstart-create-and-run-load-test" data-linktype="absolute-path">Azure Load Testing service</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureLoadTest:start/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>testID</td>
+<td>The ID of a specific load test created in the Azure Load Testing service.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-41">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:azureLoadTest:start/1.0",
+      "parameters": [
+        {
+            "key": "testID",
+            "value": "0"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+<h3 id="stop-load-test-azure-load-testing">Stop Load Test (Azure Load Testing)</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capability name</td>
+<td>Stop-1.0</td>
+</tr>
+<tr>
+<td>Target type</td>
+<td>Microsoft-AzureLoadTest</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Stops a load test (from Azure Load Testing) based on the provided load test ID.</td>
+</tr>
+<tr>
+<td>Prerequisites</td>
+<td>A load test with a valid load test ID must be created in the <a href="/en-us/azure/load-testing/quickstart-create-and-run-load-test" data-linktype="absolute-path">Azure Load Testing service</a>.</td>
+</tr>
+<tr>
+<td>Urn</td>
+<td>urn:csci:microsoft:azureLoadTest:stop/1.0</td>
+</tr>
+<tr>
+<td>Fault type</td>
+<td>Discrete.</td>
+</tr>
+<tr>
+<td>Parameters (key, value)</td>
+<td></td>
+</tr>
+<tr>
+<td>testID</td>
+<td>The ID of a specific load test created in the Azure Load Testing service.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="sample-json-42">Sample JSON</h4>
+<pre><code class="lang-json">{
+  "name": "branchOne",
+  "actions": [
+    {
+      "type": "discrete",
+      "name": "urn:csci:microsoft:azureLoadTest:stop/1.0",
+      "parameters": [
+        {
+            "key": "testID",
+            "value": "0"
+        }
+    ],
+      "selectorid": "myResources"
+    }
+  ]
+}
+</code></pre>
+</div>
+					
+		<div
+			id="ms--inline-notifications"
+			class="margin-block-xs"
+			data-bi-name="inline-notification"
+		></div>
+	 
+		<div
+			id="assertive-live-region"
+			role="alert"
+			aria-live="assertive"
+			class="visually-hidden"
+			aria-relevant="additions"
+			aria-atomic="true"
+		></div>
+		<div
+			id="polite-live-region"
+			role="status"
+			aria-live="polite"
+			class="visually-hidden"
+			aria-relevant="additions"
+			aria-atomic="true"
+		></div>
+	
+					
+		<!-- feedback section -->
+		<section
+			id="site-user-feedback-footer"
+			class="font-size-sm margin-top-md display-none-print display-none-desktop"
+			data-test-id="site-user-feedback-footer"
+			data-bi-name="site-feedback-section"
+		>
+			<hr class="hr" />
+			<h2 id="ms--feedback" class="title is-3">Feedback</h2>
+			<div class="display-flex flex-wrap-wrap align-items-center">
+				<p class="font-weight-semibold margin-xxs margin-left-none">
+					Was this page helpful?
+				</p>
+				<div class="buttons">
+					<button
+						class="thumb-rating-button like button button-primary button-sm"
+						data-test-id="footer-rating-yes"
+						data-binary-rating-response="rating-yes"
+						type="button"
+						title="This article is helpful"
+						data-bi-name="button-rating-yes"
+						aria-pressed="false"
+					>
+						<span class="icon" aria-hidden="true">
+							<span class="docon docon-like"></span>
+						</span>
+						<span>Yes</span>
+					</button>
+					<button
+						class="thumb-rating-button dislike button button-primary button-sm"
+						id="standard-rating-no-button"
+						hidden
+						data-test-id="footer-rating-no"
+						data-binary-rating-response="rating-no"
+						type="button"
+						title="This article is not helpful"
+						data-bi-name="button-rating-no"
+						aria-pressed="false"
+					>
+						<span class="icon" aria-hidden="true">
+							<span class="docon docon-dislike"></span>
+						</span>
+						<span>No</span>
+					</button>
+					<details
+						class="popover popover-top"
+						id="mobile-help-popover"
+						data-test-id="footer-feedback-popover"
+					>
+						<summary
+							class="thumb-rating-button dislike button button-primary button-sm"
+							data-test-id="details-footer-rating-no"
+							data-binary-rating-response="rating-no"
+							title="This article is not helpful"
+							data-bi-name="button-rating-no"
+							aria-pressed="false"
+							data-bi-an="feedback-unhelpful-popover"
+						>
+							<span class="icon" aria-hidden="true">
+								<span class="docon docon-dislike"></span>
+							</span>
+							<span>No</span>
+						</summary>
+						<div
+							class="popover-content width-200 width-300-tablet"
+							role="dialog"
+							aria-labelledby="popover-heading"
+							aria-describedby="popover-description"
+						>
+							<p id="popover-heading" class="font-size-lg margin-bottom-xxs font-weight-semibold">
+								Need help with this topic?
+							</p>
+							<p id="popover-description" class="font-size-sm margin-bottom-xs">
+								Want to try using Ask Learn to clarify or guide you through this topic?
+							</p>
+							
+		<div class="buttons flex-direction-row flex-wrap justify-content-center gap-xxs">
+			<div>
+		<button
+			class="button button-sm border inner-focus display-none margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-test-id="ask-learn-assistant-modal-entry-mobile-feedback"
+			data-ask-learn-modal-entry-feedback
+			data-bi-an=feedback-unhelpful-popover
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-label="Ask Learn"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+		</button>
+		<button
+			class="button button-sm display-inline-flex display-none-desktop flex-shrink-0 margin-right-xxs border-color-ask-learn margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-bi-an=feedback-unhelpful-popover
+			data-test-id="ask-learn-assistant-modal-entry-tablet-feedback"
+			data-ask-learn-modal-entry-feedback
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+		<button
+			class="button button-sm display-none flex-shrink-0 display-inline-flex-desktop margin-right-xxs border-color-ask-learn margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-bi-an=feedback-unhelpful-popover
+			data-test-id="ask-learn-assistant-flyout-entry-feedback"
+			data-ask-learn-flyout-entry-show-only
+			data-flyout-button="toggle"
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-controls="ask-learn-flyout"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+	</div>
+			<button
+				type="button"
+				class="button button-sm margin-right-xxs"
+				data-help-option="suggest-fix"
+				data-bi-name="feedback-suggest"
+				data-bi-an="feedback-unhelpful-popover"
+				data-test-id="suggest-fix"
+			>
+				<span class="icon" aria-hidden="true">
+					<span class="docon docon-feedback"></span>
+				</span>
+				<span> Suggest a fix? </span>
+			</button>
+		</div>
+	
+						</div>
+					</details>
+				</div>
+			</div>
+		</section>
+		<!-- end feedback section -->
+	
+				</div>
+				
+		<div id="ms--additional-resources-mobile" class="display-none-print">
+			<hr class="hr" hidden />
+			<h2 id="ms--additional-resources-mobile-heading" class="title is-3" hidden>
+				Additional resources
+			</h2>
+			
+		<section
+			id="right-rail-recommendations-mobile"
+			class=""
+			data-bi-name="recommendations"
+			hidden
+		></section>
+	 
+		<section
+			id="right-rail-training-mobile"
+			class=""
+			data-bi-name="learning-resource-card"
+			hidden
+		></section>
+	 
+		<section
+			id="right-rail-events-mobile"
+			class=""
+			data-bi-name="events-card"
+			hidden
+		></section>
+	
+		</div>
+	 
+		<div
+			id="article-metadata-footer"
+			data-bi-name="article-metadata-footer"
+			data-test-id="article-metadata-footer"
+			class="page-metadata-container"
+		>
+			<hr class="hr" />
+			<ul class="metadata page-metadata" data-bi-name="page info" lang="en-us" dir="ltr">
+				<li class="visibility-hidden-visual-diff">
+			<span class="badge badge-sm text-wrap-pretty">
+				<span>Last updated on <local-time format="twoDigitNumeric"
+		datetime="2025-07-06T08:00:00.000Z"
+		data-article-date-source="calculated"
+		class="is-invisible"
+	>
+		2025-07-06
+	</local-time></span>
+			</span>
+		</li>
+			</ul>
+		</div>
+	
+			</div>
+			
+		<div
+			id="action-panel"
+			role="region"
+			aria-label="Action Panel"
+			class="action-panel"
+			tabindex="-1"
+		></div>
+	
+		
+				</main>
+				<aside
+					id="layout-body-aside"
+					class="layout-body-aside  "
+					data-bi-name="aside"
+					aria-label="Additional resources"
+			  >
+					
+		<div
+			id="ms--additional-resources"
+			class="right-container padding-sm display-none display-block-desktop height-full"
+			data-bi-name="pageactions"
+		>
+			<div id="affixed-right-container" data-bi-name="right-column">
+				
+		<nav
+			id="side-doc-outline"
+			class="doc-outline border-bottom padding-bottom-xs margin-bottom-xs scrollbar-width-thin"
+			data-bi-name="intopic toc"
+			aria-label="In this article"
+		>
+			<h3>In this article</h3>
+		</nav>
+	
+				<!-- Feedback -->
+				
+		<section
+			id="ms--site-user-feedback-right-rail"
+			class="font-size-sm display-none-print"
+			data-test-id="site-user-feedback-right-rail"
+			data-bi-name="site-feedback-right-rail"
+		>
+			<div class="display-flex flex-wrap-wrap align-items-center">
+				<p class="font-weight-semibold margin-xxs margin-left-none">
+					Was this page helpful?
+				</p>
+				<div class="display-flex flex-wrap-nowrap">
+					<button
+						class="thumb-rating-button like inner-focus"
+						data-test-id="right-rail-rating-yes"
+						data-binary-rating-response="rating-yes"
+						type="button"
+						title="This article is helpful"
+						aria-label="This article is helpful"
+						data-bi-name="button-rating-yes"
+						aria-pressed="false"
+					>
+						<span class="icon" aria-hidden="true">
+							<span class="docon docon-like"></span>
+						</span>
+					</button>
+					<button
+						class="thumb-rating-button dislike inner-focus"
+						id="right-rail-no-button"
+						hidden
+						data-test-id="right-rail-rating-no"
+						data-binary-rating-response="rating-no"
+						type="button"
+						title="This article is not helpful"
+						aria-label="This article is not helpful"
+						data-bi-name="button-rating-no"
+						aria-pressed="false"
+					>
+						<span class="icon" aria-hidden="true">
+							<span class="docon docon-dislike"></span>
+						</span>
+					</button>
+					<details class="popover popover-right" id="help-popover" data-test-id="feedback-popover">
+						<summary
+							tabindex="0"
+							class="thumb-rating-button dislike inner-focus"
+							data-test-id="details-right-rail-rating-no"
+							data-binary-rating-response="rating-no"
+							title="This article is not helpful"
+							aria-label="This article is not helpful"
+							data-bi-name="button-rating-no"
+							aria-pressed="false"
+							data-bi-an="feedback-unhelpful-popover"
+						>
+							<span class="icon" aria-hidden="true">
+								<span class="docon docon-dislike"></span>
+							</span>
+						</summary>
+						<div
+							class="popover-content width-200 width-300-tablet"
+							role="dialog"
+							aria-labelledby="popover-heading-right-rail"
+							aria-describedby="popover-description-right-rail"
+						>
+							<p
+								id="popover-heading-right-rail"
+								class="font-size-lg margin-bottom-xxs font-weight-semibold"
+							>
+								Need help with this topic?
+							</p>
+							<p id="popover-description-right-rail" class="font-size-sm margin-bottom-xs">
+								Want to try using Ask Learn to clarify or guide you through this topic?
+							</p>
+							
+		<div class="buttons flex-direction-row flex-wrap justify-content-center gap-xxs">
+			<div>
+		<button
+			class="button button-sm border inner-focus display-none margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-test-id="ask-learn-assistant-modal-entry-mobile-feedback"
+			data-ask-learn-modal-entry-feedback
+			data-bi-an=feedback-unhelpful-popover
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-label="Ask Learn"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+		</button>
+		<button
+			class="button button-sm display-inline-flex display-none-desktop flex-shrink-0 margin-right-xxs border-color-ask-learn margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-bi-an=feedback-unhelpful-popover
+			data-test-id="ask-learn-assistant-modal-entry-tablet-feedback"
+			data-ask-learn-modal-entry-feedback
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+		<button
+			class="button button-sm display-none flex-shrink-0 display-inline-flex-desktop margin-right-xxs border-color-ask-learn margin-right-xxs"
+			data-bi-name="ask-learn-assistant-entry-troubleshoot"
+			data-bi-an=feedback-unhelpful-popover
+			data-test-id="ask-learn-assistant-flyout-entry-feedback"
+			data-ask-learn-flyout-entry-show-only
+			data-flyout-button="toggle"
+			type="button"
+			style="min-width: max-content;"
+			aria-expanded="false"
+			aria-controls="ask-learn-flyout"
+			hidden
+		>
+			<span class="icon font-size-lg" aria-hidden="true">
+				<span class="docon docon-chat-sparkle-fill gradient-ask-learn-logo"></span>
+			</span>
+			<span>Ask Learn</span>
+		</button>
+	</div>
+			<button
+				type="button"
+				class="button button-sm margin-right-xxs"
+				data-help-option="suggest-fix"
+				data-bi-name="feedback-suggest"
+				data-bi-an="feedback-unhelpful-popover"
+				data-test-id="suggest-fix"
+			>
+				<span class="icon" aria-hidden="true">
+					<span class="docon docon-feedback"></span>
+				</span>
+				<span> Suggest a fix? </span>
+			</button>
+		</div>
+	
+						</div>
+					</details>
+				</div>
+			</div>
+		</section>
+	
+			</div>
+		</div>
+	
+			  </aside> <section
+					id="layout-body-flyout"
+					class="layout-body-flyout "
+					data-bi-name="flyout"
+			  >
+					 <div
+	class="height-full border-left background-color-body-medium"
+	id="ask-learn-flyout"
+></div>
+			  </section> <div class="layout-body-footer " data-bi-name="layout-footer">
+		<footer
+			id="footer"
+			data-test-id="footer"
+			data-bi-name="footer"
+			class="footer-layout padding-xs padding-sm-desktop has-default-focus border-top"
+			role="contentinfo"
+		>
+			<div class="display-flex gap-xs flex-wrap-wrap is-full-height padding-right-lg-desktop">
+				
+		<a
+			data-mscc-ic="false"
+			href="#"
+			data-bi-name="select-locale"
+			class="locale-selector-link flex-shrink-0 button button-sm button-clear external-link-indicator"
+			id=""
+			title=""
+			><span class="icon" aria-hidden="true"
+				><span class="docon docon-world"></span></span
+			><span class="local-selector-link-text">en-us</span></a
+		>
+	 <div class="ccpa-privacy-link" data-ccpa-privacy-link hidden>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://aka.ms/yourcaliforniaprivacychoices"
+			data-bi-name="your-privacy-choices"
+			class="button button-sm button-clear flex-shrink-0 external-link-indicator"
+			id=""
+			title=""
+			>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			viewBox="0 0 30 14"
+			xml:space="preserve"
+			height="16"
+			width="43"
+			aria-hidden="true"
+			focusable="false"
+		>
+			<path
+				d="M7.4 12.8h6.8l3.1-11.6H7.4C4.2 1.2 1.6 3.8 1.6 7s2.6 5.8 5.8 5.8z"
+				style="fill-rule:evenodd;clip-rule:evenodd;fill:#fff"
+			></path>
+			<path
+				d="M22.6 0H7.4c-3.9 0-7 3.1-7 7s3.1 7 7 7h15.2c3.9 0 7-3.1 7-7s-3.2-7-7-7zm-21 7c0-3.2 2.6-5.8 5.8-5.8h9.9l-3.1 11.6H7.4c-3.2 0-5.8-2.6-5.8-5.8z"
+				style="fill-rule:evenodd;clip-rule:evenodd;fill:#06f"
+			></path>
+			<path
+				d="M24.6 4c.2.2.2.6 0 .8L22.5 7l2.2 2.2c.2.2.2.6 0 .8-.2.2-.6.2-.8 0l-2.2-2.2-2.2 2.2c-.2.2-.6.2-.8 0-.2-.2-.2-.6 0-.8L20.8 7l-2.2-2.2c-.2-.2-.2-.6 0-.8.2-.2.6-.2.8 0l2.2 2.2L23.8 4c.2-.2.6-.2.8 0z"
+				style="fill:#fff"
+			></path>
+			<path
+				d="M12.7 4.1c.2.2.3.6.1.8L8.6 9.8c-.1.1-.2.2-.3.2-.2.1-.5.1-.7-.1L5.4 7.7c-.2-.2-.2-.6 0-.8.2-.2.6-.2.8 0L8 8.6l3.8-4.5c.2-.2.6-.2.9 0z"
+				style="fill:#06f"
+			></path>
+		</svg>
+	
+			<span>Your Privacy Choices</span></a
+		>
+	
+	</div>
+				<div class="flex-shrink-0">
+		<div class="dropdown has-caret-up">
+			<button
+				data-test-id="theme-selector-button"
+				class="dropdown-trigger button button-clear button-sm inner-focus theme-dropdown-trigger"
+				aria-controls="{{ themeMenuId }}"
+				aria-expanded="false"
+				title="Theme"
+				data-bi-name="theme"
+			>
+				<span class="icon" aria-hidden="true"><span class="docon docon-sun"></span></span>
+				<span>Theme</span>
+				<span class="icon expanded-indicator" aria-hidden="true">
+					<span class="docon docon-chevron-down-light"></span>
+				</span>
+			</button>
+			<div class="dropdown-menu" id="{{ themeMenuId }}" role="menu">
+				<ul class="theme-selector padding-xxs" data-test-id="theme-dropdown-menu">
+					<li class="theme display-block">
+						<button
+							class="button button-clear button-sm theme-control button-block justify-content-flex-start text-align-left"
+							data-theme-to="light"
+						>
+							<span class="theme-light margin-right-xxs">
+								<span
+									class="theme-selector-icon border display-inline-block has-body-background"
+									aria-hidden="true"
+								>
+									<svg class="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 14">
+										<rect width="22" height="14" class="has-fill-body-background" />
+										<rect x="5" y="5" width="12" height="4" class="has-fill-secondary" />
+										<rect x="5" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="8" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="11" y="2" width="3" height="1" class="has-fill-secondary" />
+										<rect x="1" y="1" width="2" height="2" class="has-fill-secondary" />
+										<rect x="5" y="10" width="7" height="2" rx="0.3" class="has-fill-primary" />
+										<rect x="19" y="1" width="2" height="2" rx="1" class="has-fill-secondary" />
+									</svg>
+								</span>
+							</span>
+							<span role="menuitem"> Light </span>
+						</button>
+					</li>
+					<li class="theme display-block">
+						<button
+							class="button button-clear button-sm theme-control button-block justify-content-flex-start text-align-left"
+							data-theme-to="dark"
+						>
+							<span class="theme-dark margin-right-xxs">
+								<span
+									class="border theme-selector-icon display-inline-block has-body-background"
+									aria-hidden="true"
+								>
+									<svg class="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 14">
+										<rect width="22" height="14" class="has-fill-body-background" />
+										<rect x="5" y="5" width="12" height="4" class="has-fill-secondary" />
+										<rect x="5" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="8" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="11" y="2" width="3" height="1" class="has-fill-secondary" />
+										<rect x="1" y="1" width="2" height="2" class="has-fill-secondary" />
+										<rect x="5" y="10" width="7" height="2" rx="0.3" class="has-fill-primary" />
+										<rect x="19" y="1" width="2" height="2" rx="1" class="has-fill-secondary" />
+									</svg>
+								</span>
+							</span>
+							<span role="menuitem"> Dark </span>
+						</button>
+					</li>
+					<li class="theme display-block">
+						<button
+							class="button button-clear button-sm theme-control button-block justify-content-flex-start text-align-left"
+							data-theme-to="high-contrast"
+						>
+							<span class="theme-high-contrast margin-right-xxs">
+								<span
+									class="border theme-selector-icon display-inline-block has-body-background"
+									aria-hidden="true"
+								>
+									<svg class="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 14">
+										<rect width="22" height="14" class="has-fill-body-background" />
+										<rect x="5" y="5" width="12" height="4" class="has-fill-secondary" />
+										<rect x="5" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="8" y="2" width="2" height="1" class="has-fill-secondary" />
+										<rect x="11" y="2" width="3" height="1" class="has-fill-secondary" />
+										<rect x="1" y="1" width="2" height="2" class="has-fill-secondary" />
+										<rect x="5" y="10" width="7" height="2" rx="0.3" class="has-fill-primary" />
+										<rect x="19" y="1" width="2" height="2" rx="1" class="has-fill-secondary" />
+									</svg>
+								</span>
+							</span>
+							<span role="menuitem"> High contrast </span>
+						</button>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+			</div>
+			<ul class="links" data-bi-name="footerlinks">
+				<li class="manage-cookies-holder" hidden=""></li>
+				<li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://learn.microsoft.com/en-us/principles-for-ai-generated-content"
+			data-bi-name="aiDisclaimer"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>AI Disclaimer</a
+		>
+	
+	</li><li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://learn.microsoft.com/en-us/previous-versions/"
+			data-bi-name="archivelink"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Previous Versions</a
+		>
+	
+	</li> <li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://techcommunity.microsoft.com/t5/microsoft-learn-blog/bg-p/MicrosoftLearnBlog"
+			data-bi-name="bloglink"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Blog</a
+		>
+	
+	</li> <li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://learn.microsoft.com/en-us/contribute"
+			data-bi-name="contributorGuide"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Contribute</a
+		>
+	
+	</li><li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://go.microsoft.com/fwlink/?LinkId=521839"
+			data-bi-name="privacy"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Privacy</a
+		>
+	
+	</li><li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://go.microsoft.com/fwlink/?linkid=2259814"
+			data-bi-name="consumer-health-privacy"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Consumer Health Privacy</a
+		>
+	
+	</li><li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://learn.microsoft.com/en-us/legal/termsofuse"
+			data-bi-name="termsofuse"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Terms of Use</a
+		>
+	
+	</li><li>
+		
+		<a
+			data-mscc-ic="false"
+			href="https://www.microsoft.com/legal/intellectualproperty/Trademarks/"
+			data-bi-name="trademarks"
+			class=" external-link-indicator"
+			id=""
+			title=""
+			>Trademarks</a
+		>
+	
+	</li>
+				<li>&copy; Microsoft 2026</li>
+			</ul>
+		</footer>
+	</footer>
+			</body>
+		</html>
